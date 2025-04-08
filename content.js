@@ -121,6 +121,7 @@ class EnvSwitcherUI {
     this.toggleButton = document.createElement('button');
     this.toggleButton.className = 'env-switcher-floating__toggle';
     this.toggleButton.innerHTML = this.collapsed ? '⊕' : '⊖';
+    this.toggleButton.title = this.collapsed ? 'Expand environment switcher' : 'Collapse environment switcher';
     
     // Create project select if we have projects
     if (this.projects.length > 0) {
@@ -205,9 +206,9 @@ class EnvSwitcherUI {
     
     this.contentWrapper.appendChild(this.goButton);
     
-    // Add elements to container
-    this.container.appendChild(this.contentWrapper);
+    // Add elements to container - toggle button first for better clickability
     this.container.appendChild(this.toggleButton);
+    this.container.appendChild(this.contentWrapper);
   }
   
   // Attach event handlers
@@ -219,9 +220,11 @@ class EnvSwitcherUI {
       if (this.collapsed) {
         this.container.classList.add('env-switcher-floating--collapsed');
         this.toggleButton.innerHTML = '⊕';
+        this.toggleButton.title = 'Expand environment switcher';
       } else {
         this.container.classList.remove('env-switcher-floating--collapsed');
         this.toggleButton.innerHTML = '⊖';
+        this.toggleButton.title = 'Collapse environment switcher';
       }
       
       // Save collapsed state
