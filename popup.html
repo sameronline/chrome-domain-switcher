@@ -11,17 +11,21 @@
       <h2>Environment Switcher</h2>
     </div>
     
-    <!-- Row 1: Project, URL/Domain, Protocol -->
+    <!-- Row 1: Project and Protocol -->
     <div class="env-switcher__row">
       <select id="project" class="env-switcher__select" title="Select Project"></select>
-      <select id="domain" class="env-switcher__select" title="Select Domain"></select>
       <select id="protocol" class="env-switcher__select" title="Select Protocol">
         <option value="https:">https://</option>
         <option value="http:">http://</option>
       </select>
     </div>
     
-    <!-- Row 2: Open button, Auto-redirect, New window -->
+    <!-- Row 2: URL/Domain in its own row -->
+    <div class="env-switcher__row">
+      <select id="domain" class="env-switcher__select domain-select" title="Select Domain"></select>
+    </div>
+    
+    <!-- Row 3: Open button, Auto-redirect, New window -->
     <div class="env-switcher__row">
       <button id="go-btn" class="env-switcher__action-btn">Open</button>
       
@@ -36,7 +40,7 @@
       </div>
     </div>
     
-    <!-- Row 3: Copy path, Copy URL -->
+    <!-- Row 4: Copy path, Copy URL -->
     <div class="env-switcher__row">
       <button id="copy-path" class="env-switcher__action-btn" title="Copy current path">
         <span class="icon">📋</span> Copy Path
@@ -46,7 +50,7 @@
       </button>
     </div>
     
-    <!-- Row 4: Toggle floating UI -->
+    <!-- Row 5: Toggle floating UI -->
     <div class="env-switcher__row">
       <button id="toggle-floating" class="env-switcher__toggle-btn">Toggle Floating UI</button>
     </div>

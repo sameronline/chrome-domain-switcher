@@ -51,6 +51,17 @@ body {
   min-width: 0; /* Allows flexbox to shrink inputs below min-content */
 }
 
+/* Domain select - standalone in its own row */
+.domain-select {
+  width: 100%;
+  background-color: #f8f8f8;
+  font-weight: 500;
+  border: 1px solid #ccc;
+  border-left: 3px solid var(--primary-color);
+  padding: 10px;
+  font-size: 15px;
+}
+
 .env-switcher__action-btn {
   flex: 1;
   background: var(--primary-color);
