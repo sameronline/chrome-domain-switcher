@@ -78,6 +78,11 @@ class EnvSwitcherUI {
     // Build the UI
     this.buildUI();
     
+    // Only continue if UI was built successfully
+    if (!this.container) {
+      return;
+    }
+    
     // Attach event handlers
     this.attachEventHandlers();
     
@@ -97,15 +102,17 @@ class EnvSwitcherUI {
       }
     }
     
-    // If no project found but projects exist, use the first one
-    if (!this.currentProject && this.projects.length > 0) {
-      this.currentProject = this.projects[0];
-      this.currentProjectDomains = this.projects[0].domains;
-    }
+    // No fallback - if domain not found in any project, leave currentProject as null
   }
   
   // Build the UI elements
   buildUI() {
+    // Skip building UI if no current project
+    if (!this.currentProject) {
+      console.log('No project found for domain: ' + this.currentHostname);
+      return;
+    }
+    
     // Create the main container
     this.container = document.createElement('div');
     this.container.className = 'env-switcher-floating';
@@ -171,25 +178,22 @@ class EnvSwitcherUI {
     this.domainSelect = document.createElement('select');
     this.domainSelect.className = 'env-switcher-floating__domain';
     
-    // If we have a current project, use its domains
-    if (this.currentProject) {
-      // Add domains from current project
-      this.currentProject.domains.forEach(domain => {
-        const option = document.createElement('option');
-        option.value = domain;
-        option.textContent = domain;
-        option.selected = domain === this.currentHostname;
-        this.domainSelect.appendChild(option);
-      });
-      
-      // Add current domain if not in the project
-      if (!this.currentProject.domains.includes(this.currentHostname)) {
-        const option = document.createElement('option');
-        option.value = this.currentHostname;
-        option.textContent = this.currentHostname + ' (current)';
-        option.selected = true;
-        this.domainSelect.appendChild(option);
-      }
+    // Add domains from current project
+    this.currentProject.domains.forEach(domain => {
+      const option = document.createElement('option');
+      option.value = domain;
+      option.textContent = domain;
+      option.selected = domain === this.currentHostname;
+      this.domainSelect.appendChild(option);
+    });
+    
+    // Add current domain if not in the project
+    if (!this.currentProject.domains.includes(this.currentHostname)) {
+      const option = document.createElement('option');
+      option.value = this.currentHostname;
+      option.textContent = this.currentHostname + ' (current)';
+      option.selected = true;
+      this.domainSelect.appendChild(option);
     }
     
     this.contentWrapper.appendChild(this.domainSelect);
@@ -370,7 +374,10 @@ class EnvSwitcherUI {
   
   // Append the UI to the DOM
   appendToDOM() {
-    document.body.appendChild(this.container);
+    // Only append if container exists
+    if (this.container) {
+      document.body.appendChild(this.container);
+    }
   }
   
   // Show the UI
@@ -412,6 +419,8 @@ class EnvSwitcherUI {
         // Otherwise initialize it
         this.initialize();
       }
+    } else {
+      console.log('Cannot enable floating UI: current domain not in project ' + projectName);
     }
   }
   
@@ -425,6 +434,8 @@ class EnvSwitcherUI {
       if (this.container) {
         this.hide();
       }
+    } else {
+      console.log('Cannot disable floating UI: current domain not in project ' + projectName);
     }
   }
 }
