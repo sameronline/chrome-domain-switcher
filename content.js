@@ -11,6 +11,7 @@ class EnvSwitcherUI {
     this.newWindow = false;
     this.collapsed = false;
     this.enabled = false;
+    this.enforceProtocols = true;
     
     // Current URL info
     const urlInfo = EnvSwitcher.url.parseUrl(window.location.href);
@@ -317,9 +318,9 @@ class EnvSwitcherUI {
 
     // Update protocols if necessary
     if (this.protocolSelect && this.enforceProtocols) {
-      const forcedProtocol = EnvSwitcher.protocol.getForcedProtocol(this.currentProject, this.domainSelect.value);
+      const forcedProtocol = EnvSwitcher.protocol.getForcedProtocol(this.domainSelect.value, this.protocolRules);
       if (forcedProtocol) {
-        this.protocolSelect.value = forcedProtocol;
+        this.protocolSelect.value = forcedProtocol.replace(':', '');
         this.protocolSelect.disabled = true;
       } else {
         this.protocolSelect.disabled = false;
@@ -330,16 +331,20 @@ class EnvSwitcherUI {
   // Navigate to the selected URL
   navigateToSelectedEnvironment() {
     const domain = this.domainSelect.value;
-    const protocol = this.protocolSelect ? this.protocolSelect.value : 'https:';
+    // Make sure protocol is properly formatted (with or without colon)
+    const protocol = this.protocolSelect ? this.protocolSelect.value : 'https';
+    const protocolWithFormat = protocol.endsWith(':') ? protocol : protocol + ':';
     const path = window.location.pathname + window.location.search + window.location.hash;
     
     // Build the URL using the correct function
     const url = EnvSwitcher.url.buildUrl(
       domain,
-      protocol,
+      protocolWithFormat,
       path,
       this.protocolRules
     );
+    
+    console.log('Navigating to URL:', url);
     
     // Navigate to the URL
     if (this.newWindow) {
@@ -533,11 +538,12 @@ class EnvSwitcherUI {
   buildTargetUrl() {
     const targetDomain = this.domainSelect.value;
     const targetProtocol = this.protocolSelect ? this.protocolSelect.value : window.location.protocol.replace(':', '');
+    const protocolWithFormat = targetProtocol.endsWith(':') ? targetProtocol : targetProtocol + ':';
     const currentPath = window.location.pathname + window.location.search + window.location.hash;
     
     return EnvSwitcher.url.buildUrl(
       targetDomain,
-      targetProtocol,
+      protocolWithFormat,
       currentPath,
       this.protocolRules
     );
@@ -551,9 +557,9 @@ class EnvSwitcherUI {
     this.domainSelect.addEventListener('change', () => {
       // Update protocol if necessary
       if (this.protocolSelect && this.enforceProtocols) {
-        const forcedProtocol = EnvSwitcher.protocol.getForcedProtocol(this.currentProject, this.domainSelect.value);
+        const forcedProtocol = EnvSwitcher.protocol.getForcedProtocol(this.domainSelect.value, this.protocolRules);
         if (forcedProtocol) {
-          this.protocolSelect.value = forcedProtocol;
+          this.protocolSelect.value = forcedProtocol.replace(':', '');
           this.protocolSelect.disabled = true;
         } else {
           this.protocolSelect.disabled = false;
