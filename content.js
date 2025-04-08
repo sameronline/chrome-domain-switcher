@@ -258,13 +258,13 @@ class EnvSwitcherUI {
     // Copy path button
     const copyPathButton = document.createElement('button');
     copyPathButton.className = 'env-switcher-floating__action-btn';
-    copyPathButton.textContent = 'Copy Path';
+    copyPathButton.textContent = 'Path';
     copyPathButton.addEventListener('click', () => {
       const path = window.location.pathname + window.location.search + window.location.hash;
       navigator.clipboard.writeText(path).then(() => {
         copyPathButton.textContent = 'Copied!';
         setTimeout(() => {
-          copyPathButton.textContent = 'Copy Path';
+          copyPathButton.textContent = 'Path';
         }, 1500);
       });
     });
@@ -273,13 +273,13 @@ class EnvSwitcherUI {
     // Copy URL button
     const copyUrlButton = document.createElement('button');
     copyUrlButton.className = 'env-switcher-floating__action-btn';
-    copyUrlButton.textContent = 'Copy URL';
+    copyUrlButton.textContent = 'URL';
     copyUrlButton.addEventListener('click', () => {
       const url = this.buildTargetUrl();
       navigator.clipboard.writeText(url).then(() => {
         copyUrlButton.textContent = 'Copied!';
         setTimeout(() => {
-          copyUrlButton.textContent = 'Copy URL';
+          copyUrlButton.textContent = 'URL';
         }, 1500);
       });
     });
