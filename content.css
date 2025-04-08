@@ -79,10 +79,6 @@
   z-index: 1;
 }
 
-.env-switcher-floating--collapsed .env-switcher-floating__toggle {
-  position: static;
-}
-
 /* Animation */
 @keyframes env-switcher-pulse {
   0% {
