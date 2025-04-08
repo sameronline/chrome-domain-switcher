@@ -11,55 +11,22 @@
       <h2>Environment Switcher</h2>
     </div>
     
-    <!-- Row 1: Project and Protocol -->
+    <!-- Project Selection -->
     <div class="env-switcher__row">
       <select id="project" class="env-switcher__select" title="Select Project"></select>
-      <select id="protocol" class="env-switcher__select" title="Select Protocol">
-        <option value="https:">https://</option>
-        <option value="http:">http://</option>
-      </select>
     </div>
     
-    <!-- Row 2: URL/Domain in its own row -->
+    <!-- Toggle Floating UI Button -->
     <div class="env-switcher__row">
-      <select id="domain" class="env-switcher__select domain-select" title="Select Domain"></select>
+      <button id="toggle-floating" class="env-switcher__toggle-btn">Show Floating UI</button>
     </div>
     
-    <!-- Row 3: Open button, Auto-redirect, New window -->
-    <div class="env-switcher__row">
-      <button id="go-btn" class="env-switcher__action-btn">Open</button>
-      
-      <div class="env-switcher__checkbox-container">
-        <input type="checkbox" id="auto-redirect" checked>
-        <label for="auto-redirect">Auto-redirect</label>
-      </div>
-      
-      <div class="env-switcher__checkbox-container">
-        <input type="checkbox" id="new-window">
-        <label for="new-window">New window</label>
-      </div>
-    </div>
-    
-    <!-- Row 4: Copy path, Copy URL -->
-    <div class="env-switcher__row">
-      <button id="copy-path" class="env-switcher__action-btn" title="Copy current path">
-        <span class="icon">📋</span> Copy Path
-      </button>
-      <button id="copy-url" class="env-switcher__action-btn" title="Copy URL with selected domain">
-        <span class="icon">🔗</span> Copy URL
-      </button>
-    </div>
-    
-    <!-- Row 5: Toggle floating UI -->
-    <div class="env-switcher__row">
-      <button id="toggle-floating" class="env-switcher__toggle-btn">Toggle Floating UI</button>
-    </div>
-    
-    <!-- Hidden link to configuration -->
+    <!-- Options link -->
     <div class="env-switcher__footer">
-      <a href="#" id="configure-btn" class="env-switcher__config-link">Configure Projects</a>
+      <a href="#" id="configure-btn" class="env-switcher__config-link">Configure Projects & Settings</a>
     </div>
   </div>
+  
   <!-- Load shared functionality first -->
   <script src="shared.js"></script>
   <!-- Then load the popup-specific code -->
