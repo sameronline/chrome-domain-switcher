@@ -26,12 +26,8 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Initialize the extension
   function init() {
-    chrome.storage.sync.get({
-      projects: [],
-      protocolRules: [],
-      autoRedirect: true,
-      newWindow: false
-    }, function(items) {
+    // Use shared settings loader
+    EnvSwitcher.getSettings(function(items) {
       projects = items.projects;
       protocolRules = items.protocolRules;
       autoRedirect = items.autoRedirect;
@@ -61,19 +57,20 @@ document.addEventListener('DOMContentLoaded', function() {
       if (tabs && tabs.length > 0) {
         const tab = tabs[0];
         
-        try {
-          const url = new URL(tab.url);
-          
+        // Use shared URL parser
+        const urlInfo = EnvSwitcher.url.parseUrl(tab.url);
+        
+        if (urlInfo.valid) {
           currentUrl = tab.url;
-          currentProtocol = url.protocol;
-          currentHostname = url.hostname;
-          currentPath = url.pathname + url.search + url.hash;
+          currentProtocol = urlInfo.protocol;
+          currentHostname = urlInfo.hostname;
+          currentPath = urlInfo.path;
           
           // Update protocol select
           protocolSelect.value = currentProtocol;
           
           // Check for protocol rules
-          const forcedProtocol = getForcedProtocol(currentHostname);
+          const forcedProtocol = EnvSwitcher.protocol.getForcedProtocol(currentHostname, protocolRules);
           if (forcedProtocol) {
             protocolSelect.value = forcedProtocol;
             protocolSelect.disabled = true;
@@ -84,29 +81,25 @@ document.addEventListener('DOMContentLoaded', function() {
           // Find current project and populate dropdowns
           findCurrentProject();
           populateProjects();
-        } catch (e) {
-          console.error('Error parsing URL:', e);
+        } else {
           // Handle non-HTTP URLs (e.g., chrome://, about:, etc.)
-          projectSelect.disabled = true;
-          domainSelect.disabled = true;
-          protocolSelect.disabled = true;
-          goButton.disabled = true;
-          copyUrlButton.disabled = true;
+          disableControls();
         }
       }
     });
   }
   
+  function disableControls() {
+    projectSelect.disabled = true;
+    domainSelect.disabled = true;
+    protocolSelect.disabled = true;
+    goButton.disabled = true;
+    copyUrlButton.disabled = true;
+  }
+  
   // Find which project the current domain belongs to
   function findCurrentProject() {
-    currentProject = null;
-    
-    for (const project of projects) {
-      if (project.domains.includes(currentHostname)) {
-        currentProject = project;
-        break;
-      }
-    }
+    currentProject = EnvSwitcher.project.findProjectForDomain(currentHostname, projects);
   }
   
   // Populate the project dropdown
@@ -175,79 +168,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
   
-  // Check if domain has a forced protocol
-  function getForcedProtocol(domain) {
-    for (const rule of protocolRules) {
-      if (!rule.includes('|')) continue;
-      
-      const [pattern, protocol] = rule.split('|');
-      const trimmedPattern = pattern.trim();
-      const trimmedProtocol = protocol.trim();
-      
-      if (matchesDomainPattern(domain, trimmedPattern)) {
-        return trimmedProtocol + ':';
-      }
-    }
-    return null;
-  }
-  
-  // Check if domain matches a pattern
-  function matchesDomainPattern(domain, pattern) {
-    // Escape regex special chars but keep * as wildcard
-    const regexPattern = pattern
-      .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape special chars
-      .replace(/\*/g, '[^.]+'); // Replace * with regex for "any chars except dot"
-    
-    try {
-      const regex = new RegExp('^' + regexPattern + '$');
-      return regex.test(domain);
-    } catch (e) {
-      console.error('Invalid pattern:', pattern, e);
-      return false;
-    }
-  }
-  
   // Build URL with selected domain and protocol
   function buildTargetUrl() {
-    const selectedDomain = domainSelect.value;
-    const selectedProtocol = protocolSelect.value;
-    
-    // Force protocol if needed
-    const forcedProtocol = getForcedProtocol(selectedDomain);
-    const protocol = forcedProtocol || selectedProtocol;
-    
-    return `${protocol}//${selectedDomain}${currentPath}`;
-  }
-  
-  // Navigate to the URL
-  function navigateToUrl(url) {
-    if (newWindow) {
-      chrome.tabs.create({ url: url });
-    } else {
-      chrome.tabs.update({ url: url });
-    }
-  }
-  
-  // Copy text to clipboard
-  function copyToClipboard(text, button) {
-    navigator.clipboard.writeText(text).then(() => {
-      const originalText = button.textContent;
-      const originalBg = button.style.background;
-      
-      button.textContent = '✓ Copied!';
-      button.style.background = 'var(--secondary-color)';
-      
-      setTimeout(() => {
-        button.textContent = originalText;
-        button.style.background = originalBg;
-      }, 1500);
-    }).catch(err => {
-      console.error('Could not copy text: ', err);
-      button.textContent = '❌ Error';
-      setTimeout(() => {
-        button.textContent = originalText;
-      }, 1500);
-    });
+    return EnvSwitcher.url.buildUrl(
+      domainSelect.value,
+      protocolSelect.value,
+      currentPath,
+      protocolRules
+    );
   }
   
   // Event: Project select change
@@ -263,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Event: Domain select change
   domainSelect.addEventListener('change', function() {
     // Update protocol according to rules
-    const forcedProtocol = getForcedProtocol(this.value);
+    const forcedProtocol = EnvSwitcher.protocol.getForcedProtocol(this.value, protocolRules);
     if (forcedProtocol) {
       protocolSelect.value = forcedProtocol;
       protocolSelect.disabled = true;
@@ -273,7 +201,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // If auto-redirect is enabled, navigate immediately
     if (autoRedirect) {
-      navigateToUrl(buildTargetUrl());
+      EnvSwitcher.url.navigate(buildTargetUrl(), newWindow);
     }
   });
   
@@ -281,13 +209,13 @@ document.addEventListener('DOMContentLoaded', function() {
   protocolSelect.addEventListener('change', function() {
     // If auto-redirect is enabled, navigate immediately
     if (autoRedirect) {
-      navigateToUrl(buildTargetUrl());
+      EnvSwitcher.url.navigate(buildTargetUrl(), newWindow);
     }
   });
   
   // Event: Go button click
   goButton.addEventListener('click', function() {
-    navigateToUrl(buildTargetUrl());
+    EnvSwitcher.url.navigate(buildTargetUrl(), newWindow);
   });
   
   // Event: Auto-redirect checkbox change
@@ -296,7 +224,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateGoButtonVisibility();
     
     // Save preference
-    chrome.storage.sync.set({ autoRedirect: autoRedirect });
+    EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.AUTO_REDIRECT, autoRedirect);
   });
   
   // Event: New window checkbox change
@@ -304,17 +232,61 @@ document.addEventListener('DOMContentLoaded', function() {
     newWindow = this.checked;
     
     // Save preference
-    chrome.storage.sync.set({ newWindow: newWindow });
+    EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.NEW_WINDOW, newWindow);
   });
   
   // Event: Copy path button click
   copyPathButton.addEventListener('click', function() {
-    copyToClipboard(currentPath, this);
+    const button = this;
+    const originalText = button.textContent;
+    const originalBg = button.style.background;
+    
+    EnvSwitcher.ui.copyToClipboard(
+      currentPath,
+      function() {
+        button.textContent = '✓ Copied!';
+        button.style.background = 'var(--secondary-color)';
+        
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.style.background = originalBg;
+        }, 1500);
+      },
+      function(err) {
+        console.error('Could not copy text: ', err);
+        button.textContent = '❌ Error';
+        setTimeout(() => {
+          button.textContent = originalText;
+        }, 1500);
+      }
+    );
   });
   
   // Event: Copy URL button click
   copyUrlButton.addEventListener('click', function() {
-    copyToClipboard(buildTargetUrl(), this);
+    const button = this;
+    const originalText = button.textContent;
+    const originalBg = button.style.background;
+    
+    EnvSwitcher.ui.copyToClipboard(
+      buildTargetUrl(),
+      function() {
+        button.textContent = '✓ Copied!';
+        button.style.background = 'var(--secondary-color)';
+        
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.style.background = originalBg;
+        }, 1500);
+      },
+      function(err) {
+        console.error('Could not copy text: ', err);
+        button.textContent = '❌ Error';
+        setTimeout(() => {
+          button.textContent = originalText;
+        }, 1500);
+      }
+    );
   });
   
   // Event: Configure button click
@@ -328,34 +300,26 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!currentProject) return;
     
     // Toggle the current project's floating UI status
-    currentProject.floatingEnabled = !currentProject.floatingEnabled;
+    const newStatus = !currentProject.floatingEnabled;
+    
+    // Update projects array with the new status
+    projects = EnvSwitcher.project.updateFloatingUIStatus(
+      currentProject.name,
+      projects,
+      newStatus,
+      function() {
+        console.log(`Floating UI ${newStatus ? 'enabled' : 'disabled'} for project: ${currentProject.name}`);
+      }
+    );
+    
+    // Update current project object
+    currentProject.floatingEnabled = newStatus;
     
     // Update UI
     updateToggleButton();
     
-    // Find the project index
-    const projectIndex = projects.findIndex(p => p.name === currentProject.name);
-    if (projectIndex !== -1) {
-      // Create a new projects array with the updated project
-      const updatedProjects = [...projects];
-      updatedProjects[projectIndex] = currentProject;
-      
-      // Save the updated projects to storage
-      chrome.storage.sync.set({ projects: updatedProjects }, function() {
-        console.log('Project toggle status saved');
-      });
-      
-      // Send message to content script to toggle floating UI for this project
-      chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
-        if (tabs && tabs.length > 0) {
-          chrome.tabs.sendMessage(tabs[0].id, { 
-            action: 'toggleFloatingUI',
-            enabled: currentProject.floatingEnabled,
-            projectName: currentProject.name
-          });
-        }
-      });
-    }
+    // Send message to content script
+    EnvSwitcher.project.toggleFloatingUI(currentProject.name, newStatus);
   });
   
   // Initialize the extension

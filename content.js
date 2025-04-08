@@ -1,16 +1,10 @@
 // Environment Detector - Content Script
 
-// Domain detection patterns
-const DOMAIN_PATTERNS = {
-  // Removed lando, ddev, and browserSync patterns
-};
-
 // Class for the floating UI
 class EnvSwitcherUI {
   constructor() {
     this.projects = [];
     this.protocolRules = [];
-    this.detectors = {}; // Removed lando, ddev, browserSync detectors
     this.showProtocol = true;
     this.autoCollapse = true;
     this.autoRedirect = true;
@@ -19,6 +13,7 @@ class EnvSwitcherUI {
     this.enabled = false;
     
     // Current URL info
+    const urlInfo = EnvSwitcher.url.parseUrl(window.location.href);
     this.currentUrl = window.location.href;
     this.currentProtocol = window.location.protocol;
     this.currentHostname = window.location.hostname;
@@ -43,19 +38,9 @@ class EnvSwitcherUI {
   
   // Load settings from storage
   loadSettings() {
-    chrome.storage.sync.get({
-      projects: [],
-      protocolRules: [],
-      detectors: {}, // Removed lando, ddev, browserSync detectors
-      showProtocol: true,
-      autoCollapse: true,
-      autoRedirect: true,
-      newWindow: false,
-      collapsedState: true
-    }, (items) => {
+    EnvSwitcher.getSettings((items) => {
       this.projects = items.projects;
       this.protocolRules = items.protocolRules;
-      this.detectors = items.detectors;
       this.showProtocol = items.showProtocol;
       this.autoCollapse = items.autoCollapse;
       this.autoRedirect = items.autoRedirect;
@@ -101,17 +86,11 @@ class EnvSwitcherUI {
   
   // Find which project the current domain belongs to
   findCurrentProject() {
-    this.currentProject = null;
+    this.currentProject = EnvSwitcher.project.findProjectForDomain(this.currentHostname, this.projects);
     
-    for (const project of this.projects) {
-      if (project.domains.includes(this.currentHostname)) {
-        this.currentProject = project;
-        this.currentProjectDomains = project.domains;
-        break;
-      }
+    if (this.currentProject) {
+      this.currentProjectDomains = this.currentProject.domains;
     }
-    
-    // No fallback - if domain not found in any project, leave currentProject as null
   }
   
   // Build the UI elements
@@ -174,7 +153,7 @@ class EnvSwitcherUI {
       this.protocolSelect.value = this.currentProtocol;
       
       // Check for forced protocol
-      const forcedProtocol = this.getForcedProtocol(this.currentHostname);
+      const forcedProtocol = EnvSwitcher.protocol.getForcedProtocol(this.currentHostname, this.protocolRules);
       if (forcedProtocol) {
         this.protocolSelect.value = forcedProtocol;
         this.protocolSelect.disabled = true;
@@ -241,7 +220,7 @@ class EnvSwitcherUI {
       }
       
       // Save collapsed state
-      chrome.storage.sync.set({ collapsedState: this.collapsed });
+      EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.COLLAPSED_STATE, this.collapsed);
     });
     
     // Project select handler (if exists)
@@ -260,7 +239,7 @@ class EnvSwitcherUI {
     // Domain select handler
     this.domainSelect.addEventListener('change', () => {
       // Update protocol if forced
-      const forcedProtocol = this.getForcedProtocol(this.domainSelect.value);
+      const forcedProtocol = EnvSwitcher.protocol.getForcedProtocol(this.domainSelect.value, this.protocolRules);
       if (forcedProtocol) {
         this.protocolSelect.value = forcedProtocol;
         this.protocolSelect.disabled = true;
@@ -315,7 +294,7 @@ class EnvSwitcherUI {
       this.domainSelect.value = this.currentProject.domains[0];
       
       // Update protocol if forced
-      const forcedProtocol = this.getForcedProtocol(this.domainSelect.value);
+      const forcedProtocol = EnvSwitcher.protocol.getForcedProtocol(this.domainSelect.value, this.protocolRules);
       if (forcedProtocol && this.protocolSelect) {
         this.protocolSelect.value = forcedProtocol;
         this.protocolSelect.disabled = true;
@@ -332,52 +311,18 @@ class EnvSwitcherUI {
   
   // Navigate to the selected URL
   navigateToSelectedUrl() {
-    const selectedDomain = this.domainSelect.value;
-    const selectedProtocol = this.protocolSelect ? this.protocolSelect.value : window.location.protocol;
-    
-    // Force protocol if needed
-    const forcedProtocol = this.getForcedProtocol(selectedDomain);
-    const protocol = forcedProtocol || selectedProtocol;
-    
-    const targetUrl = `${protocol}//${selectedDomain}${this.currentPath}`;
+    const url = EnvSwitcher.url.buildUrl(
+      this.domainSelect.value,
+      this.protocolSelect ? this.protocolSelect.value : window.location.protocol,
+      this.currentPath,
+      this.protocolRules
+    );
     
     // Navigate to the new URL
     if (this.newWindow) {
-      window.open(targetUrl, '_blank');
+      window.open(url, '_blank');
     } else {
-      window.location.href = targetUrl;
-    }
-  }
-  
-  // Check if domain has a forced protocol
-  getForcedProtocol(domain) {
-    for (const rule of this.protocolRules) {
-      if (!rule.includes('|')) continue;
-      
-      const [pattern, protocol] = rule.split('|');
-      const trimmedPattern = pattern.trim();
-      const trimmedProtocol = protocol.trim();
-      
-      if (this.matchesDomainPattern(domain, trimmedPattern)) {
-        return trimmedProtocol + ':';
-      }
-    }
-    return null;
-  }
-  
-  // Check if domain matches a pattern
-  matchesDomainPattern(domain, pattern) {
-    // Escape regex special chars but keep * as wildcard
-    const regexPattern = pattern
-      .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape special chars
-      .replace(/\*/g, '[^.]+'); // Replace * with regex for "any chars except dot"
-    
-    try {
-      const regex = new RegExp('^' + regexPattern + '$');
-      return regex.test(domain);
-    } catch (e) {
-      console.error('Invalid pattern:', pattern, e);
-      return false;
+      window.location.href = url;
     }
   }
   
@@ -463,7 +408,7 @@ class EnvSwitcherUI {
       }
       
       // Save the updated projects to storage
-      chrome.storage.sync.set({ projects: this.projects }, () => {
+      EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.PROJECTS, this.projects, () => {
         console.log(`Floating UI enabled for project: ${projectName}`);
       });
     } else {
@@ -492,7 +437,7 @@ class EnvSwitcherUI {
       }
       
       // Save the updated projects to storage
-      chrome.storage.sync.set({ projects: this.projects }, () => {
+      EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.PROJECTS, this.projects, () => {
         console.log(`Floating UI disabled for project: ${projectName}`);
       });
     } else {
