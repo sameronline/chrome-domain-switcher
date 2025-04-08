@@ -5,7 +5,12 @@ chrome.runtime.onInstalled.addListener(function(details) {
   if (details.reason === 'install') {
     // Default settings
     chrome.storage.sync.set({
-      domains: [],
+      projects: [
+        {
+          name: "Example Project",
+          domains: ["dev.example.com", "stage.example.com", "www.example.com"]
+        }
+      ],
       protocolRules: [
         '*.dev.example.com|https',
         '*.stage.example.com|https'
@@ -50,4 +55,14 @@ function detectEnvironments(hostname) {
   const environments = [];
   
   return environments;
+}
+
+// Find which project a domain belongs to
+function findProjectForDomain(hostname, projects) {
+  for (const project of projects) {
+    if (project.domains.includes(hostname)) {
+      return project;
+    }
+  }
+  return null;
 }

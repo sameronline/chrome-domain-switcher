@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
   // DOM elements
+  const projectSelect = document.getElementById('project');
   const domainSelect = document.getElementById('domain');
   const protocolSelect = document.getElementById('protocol');
   const goButton = document.getElementById('go-btn');
@@ -17,19 +18,23 @@ document.addEventListener('DOMContentLoaded', function() {
   let autoRedirect = true;
   let newWindow = false;
   let floatingEnabled = false;
-  let domains = [];
+  let projects = [];
   let protocolRules = [];
+  
+  // Current project and domains
+  let currentProject = null;
+  let currentProjectDomains = [];
   
   // Initialize the extension
   function init() {
     chrome.storage.sync.get({
-      domains: [],
+      projects: [],
       protocolRules: [],
       autoRedirect: true,
       newWindow: false,
       floatingEnabled: false
     }, function(items) {
-      domains = items.domains;
+      projects = items.projects;
       protocolRules = items.protocolRules;
       autoRedirect = items.autoRedirect;
       newWindow = items.newWindow;
@@ -71,36 +76,75 @@ document.addEventListener('DOMContentLoaded', function() {
           protocolSelect.disabled = false;
         }
         
-        // Populate domain select dropdown
-        populateDomains();
+        // Find current project and populate dropdowns
+        findCurrentProject();
+        populateProjects();
       }
     });
   }
   
-  // Populate the domain dropdown with available options
-  function populateDomains() {
+  // Find which project the current domain belongs to
+  function findCurrentProject() {
+    currentProject = null;
+    
+    for (const project of projects) {
+      if (project.domains.includes(currentHostname)) {
+        currentProject = project;
+        break;
+      }
+    }
+  }
+  
+  // Populate the project dropdown
+  function populateProjects() {
+    // Clear existing options
+    projectSelect.innerHTML = '';
+    
+    // Add all projects
+    projects.forEach(project => {
+      const option = document.createElement('option');
+      option.value = project.name;
+      option.textContent = project.name;
+      option.selected = currentProject && project.name === currentProject.name;
+      projectSelect.appendChild(option);
+    });
+    
+    // If we found the current project, populate its domains
+    if (currentProject) {
+      populateDomains(currentProject);
+    } else if (projects.length > 0) {
+      // If current domain isn't in any project, select the first project
+      populateDomains(projects[0]);
+    }
+  }
+  
+  // Populate the domain dropdown with domains from the selected project
+  function populateDomains(project) {
+    // Store the current project
+    currentProject = project;
+    currentProjectDomains = project.domains;
+    
     // Clear existing options
     domainSelect.innerHTML = '';
     
-    // Add detected + configured domains
-    let allDomains = [...domains];
-    
-    // Add current domain if not in the list
-    if (currentHostname && !allDomains.includes(currentHostname)) {
-      allDomains.push(currentHostname);
-    }
-    
-    // Remove duplicates and sort
-    allDomains = [...new Set(allDomains)].sort();
-    
-    // Add options to select
-    allDomains.forEach(domain => {
+    // Add domains from this project
+    project.domains.forEach(domain => {
       const option = document.createElement('option');
       option.value = domain;
       option.textContent = domain;
       option.selected = domain === currentHostname;
       domainSelect.appendChild(option);
     });
+    
+    // If current hostname isn't in the project but we're on a valid domain,
+    // add it as a temporary option
+    if (currentHostname && !project.domains.includes(currentHostname)) {
+      const option = document.createElement('option');
+      option.value = currentHostname;
+      option.textContent = currentHostname + ' (current)';
+      option.selected = true;
+      domainSelect.appendChild(option);
+    }
   }
   
   // Check if domain has a forced protocol
@@ -169,6 +213,16 @@ document.addEventListener('DOMContentLoaded', function() {
       console.error('Could not copy text: ', err);
     });
   }
+  
+  // Event: Project select change
+  projectSelect.addEventListener('change', function() {
+    const selectedProjectName = this.value;
+    const selectedProject = projects.find(p => p.name === selectedProjectName);
+    
+    if (selectedProject) {
+      populateDomains(selectedProject);
+    }
+  });
   
   // Event: Domain select change
   domainSelect.addEventListener('change', function() {

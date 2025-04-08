@@ -1,8 +1,8 @@
 document.addEventListener('DOMContentLoaded', function() {
   // DOM elements
-  const domainListElement = document.getElementById('domain-list');
-  const newDomainInput = document.getElementById('new-domain');
-  const addDomainButton = document.getElementById('add-domain');
+  const projectsContainer = document.getElementById('projects-container');
+  const newProjectInput = document.getElementById('new-project');
+  const addProjectButton = document.getElementById('add-project');
   const protocolRulesTextarea = document.getElementById('protocol-rules');
   const showProtocolCheckbox = document.getElementById('show-protocol');
   const autoCollapseCheckbox = document.getElementById('auto-collapse');
@@ -11,7 +11,12 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Default settings
   const defaultSettings = {
-    domains: [],
+    projects: [
+      {
+        name: "Example Project",
+        domains: ["dev.example.com", "stage.example.com", "www.example.com"]
+      }
+    ],
     protocolRules: [
       '*.dev.example.com|https',
       '*.stage.example.com|https'
@@ -23,23 +28,23 @@ document.addEventListener('DOMContentLoaded', function() {
   };
   
   // Current settings
-  let domains = [];
+  let projects = [];
   let protocolRules = [];
   
   // Load settings when page loads
   function loadSettings() {
     chrome.storage.sync.get({
-      domains: defaultSettings.domains,
+      projects: defaultSettings.projects,
       protocolRules: defaultSettings.protocolRules,
       detectors: defaultSettings.detectors,
       showProtocol: defaultSettings.showProtocol,
       autoCollapse: defaultSettings.autoCollapse
     }, function(items) {
-      domains = items.domains;
+      projects = items.projects;
       protocolRules = items.protocolRules;
       
       // Update UI with loaded settings
-      updateDomainList();
+      updateProjectsUI();
       protocolRulesTextarea.value = protocolRules.join('\n');
       
       showProtocolCheckbox.checked = items.showProtocol;
@@ -47,41 +52,138 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // Update the domain list in the UI
-  function updateDomainList() {
+  // Update the projects UI
+  function updateProjectsUI() {
     // Clear existing list
-    domainListElement.innerHTML = '';
+    projectsContainer.innerHTML = '';
     
-    // Add each domain to the list
-    domains.forEach(function(domain) {
-      const domainItem = document.createElement('div');
-      domainItem.className = 'domain-item';
+    // Add each project to the list
+    projects.forEach(function(project, projectIndex) {
+      const projectDiv = document.createElement('div');
+      projectDiv.className = 'project-item';
       
-      const domainText = document.createElement('span');
-      domainText.textContent = domain;
-      domainItem.appendChild(domainText);
+      // Project name with edit/delete controls
+      const projectHeader = document.createElement('div');
+      projectHeader.className = 'project-header';
       
-      const removeButton = document.createElement('button');
-      removeButton.textContent = 'Remove';
-      removeButton.addEventListener('click', function() {
-        removeDomain(domain);
+      const projectName = document.createElement('h3');
+      projectName.textContent = project.name;
+      projectHeader.appendChild(projectName);
+      
+      const projectControls = document.createElement('div');
+      projectControls.className = 'project-controls';
+      
+      const editNameButton = document.createElement('button');
+      editNameButton.textContent = 'Edit';
+      editNameButton.addEventListener('click', function() {
+        const newName = prompt('Enter new project name:', project.name);
+        if (newName && newName.trim()) {
+          projects[projectIndex].name = newName.trim();
+          updateProjectsUI();
+        }
       });
-      domainItem.appendChild(removeButton);
+      projectControls.appendChild(editNameButton);
       
-      domainListElement.appendChild(domainItem);
+      const deleteProjectButton = document.createElement('button');
+      deleteProjectButton.textContent = 'Delete';
+      deleteProjectButton.addEventListener('click', function() {
+        if (confirm(`Are you sure you want to delete the project "${project.name}"?`)) {
+          projects.splice(projectIndex, 1);
+          updateProjectsUI();
+        }
+      });
+      projectControls.appendChild(deleteProjectButton);
+      
+      projectHeader.appendChild(projectControls);
+      projectDiv.appendChild(projectHeader);
+      
+      // Domain list
+      const domainsDiv = document.createElement('div');
+      domainsDiv.className = 'domain-list';
+      
+      project.domains.forEach(function(domain, domainIndex) {
+        const domainItem = document.createElement('div');
+        domainItem.className = 'domain-item';
+        
+        const domainText = document.createElement('span');
+        domainText.textContent = domain;
+        domainItem.appendChild(domainText);
+        
+        const removeButton = document.createElement('button');
+        removeButton.textContent = 'Remove';
+        removeButton.addEventListener('click', function() {
+          projects[projectIndex].domains.splice(domainIndex, 1);
+          updateProjectsUI();
+        });
+        domainItem.appendChild(removeButton);
+        
+        domainsDiv.appendChild(domainItem);
+      });
+      
+      // Add domain form
+      const addDomainForm = document.createElement('div');
+      addDomainForm.className = 'add-domain-form';
+      
+      const newDomainInput = document.createElement('input');
+      newDomainInput.type = 'text';
+      newDomainInput.placeholder = 'Enter new domain';
+      addDomainForm.appendChild(newDomainInput);
+      
+      const addDomainButton = document.createElement('button');
+      addDomainButton.textContent = 'Add Domain';
+      addDomainButton.addEventListener('click', function() {
+        addDomainToProject(projectIndex, newDomainInput.value.trim());
+        newDomainInput.value = '';
+      });
+      addDomainForm.appendChild(addDomainButton);
+      
+      // Add keydown event for input
+      newDomainInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          addDomainToProject(projectIndex, newDomainInput.value.trim());
+          newDomainInput.value = '';
+        }
+      });
+      
+      domainsDiv.appendChild(addDomainForm);
+      projectDiv.appendChild(domainsDiv);
+      
+      projectsContainer.appendChild(projectDiv);
     });
     
-    // Show a message if no domains are configured
-    if (domains.length === 0) {
+    // Show a message if no projects are configured
+    if (projects.length === 0) {
       const emptyMessage = document.createElement('div');
-      emptyMessage.className = 'domain-item';
-      emptyMessage.textContent = 'No domains configured. Add a domain below.';
-      domainListElement.appendChild(emptyMessage);
+      emptyMessage.className = 'empty-message';
+      emptyMessage.textContent = 'No projects configured. Add a project below.';
+      projectsContainer.appendChild(emptyMessage);
     }
   }
   
-  // Add a new domain to the list
-  function addDomain(domain) {
+  // Add a new project
+  function addProject(projectName) {
+    if (!projectName) {
+      alert('Please enter a project name');
+      return;
+    }
+    
+    // Check if project name already exists
+    if (projects.some(p => p.name === projectName)) {
+      alert('A project with this name already exists');
+      return;
+    }
+    
+    projects.push({
+      name: projectName,
+      domains: []
+    });
+    
+    updateProjectsUI();
+    newProjectInput.value = '';
+  }
+  
+  // Add a domain to a project
+  function addDomainToProject(projectIndex, domain) {
     // Validate domain
     if (!domain) {
       alert('Please enter a domain');
@@ -91,27 +193,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // Remove http/https protocol if present
     domain = domain.replace(/^https?:\/\//, '');
     
-    // Validate domain isn't already in the list
-    if (domains.includes(domain)) {
-      alert('This domain is already in the list');
+    // Validate domain isn't already in the project
+    if (projects[projectIndex].domains.includes(domain)) {
+      alert('This domain is already in the project');
       return;
     }
     
-    // Add domain to the list
-    domains.push(domain);
+    // Add domain to the project
+    projects[projectIndex].domains.push(domain);
     
     // Sort domains alphabetically
-    domains.sort();
+    projects[projectIndex].domains.sort();
     
     // Update UI
-    updateDomainList();
-    newDomainInput.value = '';
-  }
-  
-  // Remove a domain from the list
-  function removeDomain(domain) {
-    domains = domains.filter(d => d !== domain);
-    updateDomainList();
+    updateProjectsUI();
   }
   
   // Save all settings
@@ -136,7 +231,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Save settings to chrome.storage.sync
     chrome.storage.sync.set({
-      domains: domains,
+      projects: projects,
       protocolRules: protocolRules,
       detectors: {
       },
@@ -156,10 +251,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // Reset settings to defaults
   function resetSettings() {
     if (confirm('Are you sure you want to reset all settings to defaults?')) {
-      domains = defaultSettings.domains;
+      projects = defaultSettings.projects;
       protocolRules = defaultSettings.protocolRules;
       
-      updateDomainList();
+      updateProjectsUI();
       protocolRulesTextarea.value = protocolRules.join('\n');
       
       showProtocolCheckbox.checked = defaultSettings.showProtocol;
@@ -168,13 +263,13 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // Event listeners
-  addDomainButton.addEventListener('click', function() {
-    addDomain(newDomainInput.value.trim());
+  addProjectButton.addEventListener('click', function() {
+    addProject(newProjectInput.value.trim());
   });
   
-  newDomainInput.addEventListener('keydown', function(e) {
+  newProjectInput.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
-      addDomain(newDomainInput.value.trim());
+      addProject(newProjectInput.value.trim());
     }
   });
   

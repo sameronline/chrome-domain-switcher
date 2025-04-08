@@ -8,7 +8,7 @@ const DOMAIN_PATTERNS = {
 // Class for the floating UI
 class EnvSwitcherUI {
   constructor() {
-    this.domains = [];
+    this.projects = [];
     this.protocolRules = [];
     this.detectors = {}; // Removed lando, ddev, browserSync detectors
     this.showProtocol = true;
@@ -24,9 +24,14 @@ class EnvSwitcherUI {
     this.currentHostname = window.location.hostname;
     this.currentPath = window.location.pathname + window.location.search + window.location.hash;
     
+    // Current project and domains
+    this.currentProject = null;
+    this.currentProjectDomains = [];
+    
     // UI elements
     this.container = null;
     this.contentWrapper = null;
+    this.projectSelect = null;
     this.domainSelect = null;
     this.protocolSelect = null;
     this.goButton = null;
@@ -39,7 +44,7 @@ class EnvSwitcherUI {
   // Load settings from storage
   loadSettings() {
     chrome.storage.sync.get({
-      domains: [],
+      projects: [],
       protocolRules: [],
       detectors: {}, // Removed lando, ddev, browserSync detectors
       showProtocol: true,
@@ -48,7 +53,7 @@ class EnvSwitcherUI {
       newWindow: false,
       floatingEnabled: false
     }, (items) => {
-      this.domains = items.domains;
+      this.projects = items.projects;
       this.protocolRules = items.protocolRules;
       this.detectors = items.detectors;
       this.showProtocol = items.showProtocol;
@@ -66,8 +71,8 @@ class EnvSwitcherUI {
   
   // Initialize the floating UI
   initialize() {
-    // Detect environments
-    this.detectEnvironments();
+    // Find current project
+    this.findCurrentProject();
     
     // Build the UI
     this.buildUI();
@@ -79,15 +84,23 @@ class EnvSwitcherUI {
     this.appendToDOM();
   }
   
-  // Detect environments based on the current hostname
-  detectEnvironments() {
-    // Initialize detected domains array
-    let detectedDomains = [];
+  // Find which project the current domain belongs to
+  findCurrentProject() {
+    this.currentProject = null;
     
-    // Removed all lando, ddev, browserSync detection code
+    for (const project of this.projects) {
+      if (project.domains.includes(this.currentHostname)) {
+        this.currentProject = project;
+        this.currentProjectDomains = project.domains;
+        break;
+      }
+    }
     
-    // Merge detected domains with configured domains
-    this.domains = [...new Set([...this.domains, ...detectedDomains])];
+    // If no project found but projects exist, use the first one
+    if (!this.currentProject && this.projects.length > 0) {
+      this.currentProject = this.projects[0];
+      this.currentProjectDomains = this.projects[0].domains;
+    }
   }
   
   // Build the UI elements
@@ -107,6 +120,23 @@ class EnvSwitcherUI {
     this.toggleButton = document.createElement('button');
     this.toggleButton.className = 'env-switcher-floating__toggle';
     this.toggleButton.innerHTML = this.collapsed ? '⊕' : '⊖';
+    
+    // Create project select if we have projects
+    if (this.projects.length > 0) {
+      this.projectSelect = document.createElement('select');
+      this.projectSelect.className = 'env-switcher-floating__project';
+      
+      // Add all projects to select
+      this.projects.forEach(project => {
+        const option = document.createElement('option');
+        option.value = project.name;
+        option.textContent = project.name;
+        option.selected = this.currentProject && project.name === this.currentProject.name;
+        this.projectSelect.appendChild(option);
+      });
+      
+      this.contentWrapper.appendChild(this.projectSelect);
+    }
     
     // Create protocol select if enabled
     if (this.showProtocol) {
@@ -139,22 +169,25 @@ class EnvSwitcherUI {
     this.domainSelect = document.createElement('select');
     this.domainSelect.className = 'env-switcher-floating__domain';
     
-    // Add all domains to select
-    this.domains.forEach(domain => {
-      const option = document.createElement('option');
-      option.value = domain;
-      option.textContent = domain;
-      option.selected = domain === this.currentHostname;
-      this.domainSelect.appendChild(option);
-    });
-    
-    // Add current domain if not in list
-    if (this.domains.indexOf(this.currentHostname) === -1) {
-      const option = document.createElement('option');
-      option.value = this.currentHostname;
-      option.textContent = this.currentHostname;
-      option.selected = true;
-      this.domainSelect.appendChild(option);
+    // If we have a current project, use its domains
+    if (this.currentProject) {
+      // Add domains from current project
+      this.currentProject.domains.forEach(domain => {
+        const option = document.createElement('option');
+        option.value = domain;
+        option.textContent = domain;
+        option.selected = domain === this.currentHostname;
+        this.domainSelect.appendChild(option);
+      });
+      
+      // Add current domain if not in the project
+      if (!this.currentProject.domains.includes(this.currentHostname)) {
+        const option = document.createElement('option');
+        option.value = this.currentHostname;
+        option.textContent = this.currentHostname + ' (current)';
+        option.selected = true;
+        this.domainSelect.appendChild(option);
+      }
     }
     
     this.contentWrapper.appendChild(this.domainSelect);
@@ -194,27 +227,47 @@ class EnvSwitcherUI {
       chrome.storage.sync.set({ collapsedState: this.collapsed });
     });
     
+    // Project select handler (if exists)
+    if (this.projectSelect) {
+      this.projectSelect.addEventListener('change', () => {
+        const selectedProjectName = this.projectSelect.value;
+        const selectedProject = this.projects.find(p => p.name === selectedProjectName);
+        
+        if (selectedProject) {
+          this.currentProject = selectedProject;
+          this.updateDomainSelect();
+        }
+      });
+    }
+    
     // Domain select handler
     this.domainSelect.addEventListener('change', () => {
       // Update protocol if forced
       const forcedProtocol = this.getForcedProtocol(this.domainSelect.value);
-      if (forcedProtocol && this.protocolSelect) {
+      if (forcedProtocol) {
         this.protocolSelect.value = forcedProtocol;
         this.protocolSelect.disabled = true;
       } else if (this.protocolSelect) {
         this.protocolSelect.disabled = false;
       }
       
-      // Auto-redirect if enabled
+      // Navigate if auto-redirect is enabled
       if (this.autoRedirect) {
         this.navigateToSelectedUrl();
+      }
+      
+      // Auto-collapse after selection if enabled
+      if (this.autoCollapse) {
+        this.collapsed = true;
+        this.container.classList.add('env-switcher-floating--collapsed');
+        this.toggleButton.innerHTML = '⊕';
       }
     });
     
     // Protocol select handler
     if (this.protocolSelect) {
       this.protocolSelect.addEventListener('change', () => {
-        // Auto-redirect if enabled
+        // Navigate if auto-redirect is enabled
         if (this.autoRedirect) {
           this.navigateToSelectedUrl();
         }
@@ -227,31 +280,55 @@ class EnvSwitcherUI {
     });
   }
   
+  // Update the domain select based on the current project
+  updateDomainSelect() {
+    // Clear existing options
+    this.domainSelect.innerHTML = '';
+    
+    // Add domains from current project
+    this.currentProject.domains.forEach(domain => {
+      const option = document.createElement('option');
+      option.value = domain;
+      option.textContent = domain;
+      this.domainSelect.appendChild(option);
+    });
+    
+    // Select first domain
+    if (this.currentProject.domains.length > 0) {
+      this.domainSelect.value = this.currentProject.domains[0];
+      
+      // Update protocol if forced
+      const forcedProtocol = this.getForcedProtocol(this.domainSelect.value);
+      if (forcedProtocol && this.protocolSelect) {
+        this.protocolSelect.value = forcedProtocol;
+        this.protocolSelect.disabled = true;
+      } else if (this.protocolSelect) {
+        this.protocolSelect.disabled = false;
+      }
+      
+      // Navigate if auto-redirect is enabled
+      if (this.autoRedirect) {
+        this.navigateToSelectedUrl();
+      }
+    }
+  }
+  
   // Navigate to the selected URL
   navigateToSelectedUrl() {
     const selectedDomain = this.domainSelect.value;
-    const selectedProtocol = this.protocolSelect ? this.protocolSelect.value : this.currentProtocol;
+    const selectedProtocol = this.protocolSelect ? this.protocolSelect.value : window.location.protocol;
     
     // Force protocol if needed
     const forcedProtocol = this.getForcedProtocol(selectedDomain);
     const protocol = forcedProtocol || selectedProtocol;
     
-    const url = `${protocol}//${selectedDomain}${this.currentPath}`;
+    const targetUrl = `${protocol}//${selectedDomain}${this.currentPath}`;
     
+    // Navigate to the new URL
     if (this.newWindow) {
-      window.open(url, '_blank');
+      window.open(targetUrl, '_blank');
     } else {
-      window.location.href = url;
-    }
-    
-    // Auto-collapse if enabled
-    if (this.autoCollapse) {
-      this.collapsed = true;
-      this.container.classList.add('env-switcher-floating--collapsed');
-      this.toggleButton.innerHTML = '⊕';
-      
-      // Save collapsed state
-      chrome.storage.sync.set({ collapsedState: this.collapsed });
+      window.location.href = targetUrl;
     }
   }
   
@@ -292,12 +369,12 @@ class EnvSwitcherUI {
     document.body.appendChild(this.container);
   }
   
-  // Show the floating UI
+  // Show the UI
   show() {
     this.container.style.display = 'block';
   }
   
-  // Hide the floating UI
+  // Hide the UI
   hide() {
     this.container.style.display = 'none';
   }
@@ -319,33 +396,33 @@ class EnvSwitcherUI {
   }
 }
 
-// Initialize a single instance
-let envSwitcher = null;
+// Initialize UI
+let envSwitcherUI = null;
 
-// Listen for messages from the popup
+// Listen for messages from popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'toggleFloatingUI') {
     if (message.enabled) {
-      // Create the floating UI if it doesn't exist
-      if (!envSwitcher) {
-        envSwitcher = new EnvSwitcherUI();
+      // Enable UI
+      if (!envSwitcherUI) {
+        envSwitcherUI = new EnvSwitcherUI();
       } else {
-        envSwitcher.show();
+        envSwitcherUI.show();
       }
     } else {
-      // Hide the floating UI if it exists
-      if (envSwitcher) {
-        envSwitcher.hide();
+      // Disable UI
+      if (envSwitcherUI) {
+        envSwitcherUI.hide();
       }
     }
-    
     sendResponse({ success: true });
   }
 });
 
-// Check if floating UI should be enabled on page load
-chrome.storage.sync.get({ floatingEnabled: false }, (items) => {
+// Initialize if enabled in settings
+chrome.storage.sync.get({ floatingEnabled: false, collapsedState: true }, (items) => {
   if (items.floatingEnabled) {
-    envSwitcher = new EnvSwitcherUI();
+    envSwitcherUI = new EnvSwitcherUI();
+    envSwitcherUI.collapsed = items.collapsedState;
   }
 }); 
