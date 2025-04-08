@@ -329,12 +329,17 @@ class EnvSwitcherUI {
   
   // Navigate to the selected URL
   navigateToSelectedEnvironment() {
-    const project = this.currentProject;
     const domain = this.domainSelect.value;
-    const protocol = this.protocolSelect ? this.protocolSelect.value : 'https';
+    const protocol = this.protocolSelect ? this.protocolSelect.value : 'https:';
+    const path = window.location.pathname + window.location.search + window.location.hash;
     
-    // Build the URL
-    const url = EnvSwitcher.buildUrl(project, domain, protocol);
+    // Build the URL using the correct function
+    const url = EnvSwitcher.url.buildUrl(
+      domain,
+      protocol,
+      path,
+      this.protocolRules
+    );
     
     // Navigate to the URL
     if (this.newWindow) {
@@ -491,15 +496,16 @@ class EnvSwitcherUI {
   
   // Helper method to build URL with current settings
   buildURL() {
-    let protocol = this.currentProtocol;
+    const domain = this.currentHostname;
+    const protocol = this.currentProtocol;
+    const path = window.location.pathname + window.location.search + window.location.hash;
     
-    // Check if there's a forced protocol for this domain
-    const forcedProtocol = EnvSwitcher.getForcedProtocol(this.currentHostname);
-    if (forcedProtocol) {
-      protocol = forcedProtocol;
-    }
-    
-    return protocol + '://' + this.currentHostname + window.location.pathname + window.location.search + window.location.hash;
+    return EnvSwitcher.url.buildUrl(
+      domain,
+      protocol,
+      path,
+      this.protocolRules
+    );
   }
   
   // Save settings
@@ -525,14 +531,15 @@ class EnvSwitcherUI {
   
   // Build target URL for links or copying
   buildTargetUrl() {
-    const targetProtocol = this.protocolSelect ? this.protocolSelect.value : window.location.protocol.replace(':', '');
     const targetDomain = this.domainSelect.value;
+    const targetProtocol = this.protocolSelect ? this.protocolSelect.value : window.location.protocol.replace(':', '');
     const currentPath = window.location.pathname + window.location.search + window.location.hash;
     
     return EnvSwitcher.url.buildUrl(
       targetDomain,
       targetProtocol,
-      currentPath
+      currentPath,
+      this.protocolRules
     );
   }
 
