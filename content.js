@@ -31,6 +31,10 @@ class EnvSwitcherUI {
     this.protocolSelect = null;
     this.goButton = null;
     this.toggleButton = null;
+    this.copyPathButton = null;
+    this.copyUrlButton = null;
+    this.autoRedirectCheckbox = null;
+    this.newWindowCheckbox = null;
     
     // Load settings and initialize if relevant project is enabled
     this.loadSettings();
@@ -117,11 +121,17 @@ class EnvSwitcherUI {
     this.toggleButton.className = 'env-switcher-floating__toggle';
     this.toggleButton.innerHTML = this.collapsed ? '⊕' : '⊖';
     this.toggleButton.title = this.collapsed ? 'Expand environment switcher' : 'Collapse environment switcher';
+    this.toggleButton.addEventListener('click', () => this.toggleCollapse());
+    
+    // ROW 1: Project and Protocol selection
+    const row1 = document.createElement('div');
+    row1.className = 'env-switcher-floating__row';
     
     // Create project select if we have projects
     if (this.projects.length > 0) {
       this.projectSelect = document.createElement('select');
-      this.projectSelect.className = 'env-switcher-floating__project';
+      this.projectSelect.className = 'env-switcher-floating__select';
+      this.projectSelect.title = 'Select Project';
       
       // Add all projects to select
       this.projects.forEach(project => {
@@ -132,193 +142,201 @@ class EnvSwitcherUI {
         this.projectSelect.appendChild(option);
       });
       
-      this.contentWrapper.appendChild(this.projectSelect);
+      this.projectSelect.addEventListener('change', () => {
+        const selectedProject = this.projects.find(p => p.name === this.projectSelect.value);
+        if (selectedProject) {
+          this.currentProject = selectedProject;
+          this.updateDomainOptions();
+        }
+      });
+      
+      row1.appendChild(this.projectSelect);
     }
     
     // Create protocol select if enabled
     if (this.showProtocol) {
       this.protocolSelect = document.createElement('select');
-      this.protocolSelect.className = 'env-switcher-floating__protocol';
+      this.protocolSelect.className = 'env-switcher-floating__select';
+      this.protocolSelect.title = 'Select Protocol';
       
-      const httpsOption = document.createElement('option');
-      httpsOption.value = 'https:';
-      httpsOption.textContent = 'https://';
+      const protocols = ['http', 'https'];
+      protocols.forEach(protocol => {
+        const option = document.createElement('option');
+        option.value = protocol;
+        option.textContent = protocol;
+        option.selected = protocol === this.currentProtocol;
+        this.protocolSelect.appendChild(option);
+      });
       
-      const httpOption = document.createElement('option');
-      httpOption.value = 'http:';
-      httpOption.textContent = 'http://';
-      
-      this.protocolSelect.appendChild(httpsOption);
-      this.protocolSelect.appendChild(httpOption);
-      this.protocolSelect.value = this.currentProtocol;
-      
-      // Check for forced protocol
-      const forcedProtocol = EnvSwitcher.protocol.getForcedProtocol(this.currentHostname, this.protocolRules);
-      if (forcedProtocol) {
-        this.protocolSelect.value = forcedProtocol;
-        this.protocolSelect.disabled = true;
-      }
-      
-      this.contentWrapper.appendChild(this.protocolSelect);
+      row1.appendChild(this.protocolSelect);
     }
+    
+    this.contentWrapper.appendChild(row1);
+    
+    // ROW 2: Domain selection
+    const row2 = document.createElement('div');
+    row2.className = 'env-switcher-floating__row';
     
     // Create domain select
     this.domainSelect = document.createElement('select');
-    this.domainSelect.className = 'env-switcher-floating__domain';
+    this.domainSelect.className = 'env-switcher-floating__select env-switcher-floating__domain-select';
+    this.domainSelect.title = 'Select Domain';
     
-    // Add domains from current project
-    this.currentProject.domains.forEach(domain => {
-      const option = document.createElement('option');
-      option.value = domain;
-      option.textContent = domain;
-      option.selected = domain === this.currentHostname;
-      this.domainSelect.appendChild(option);
-    });
+    // Add domains for the current project
+    this.updateDomainOptions();
     
-    // Add current domain if not in the project
-    if (!this.currentProject.domains.includes(this.currentHostname)) {
-      const option = document.createElement('option');
-      option.value = this.currentHostname;
-      option.textContent = this.currentHostname + ' (current)';
-      option.selected = true;
-      this.domainSelect.appendChild(option);
-    }
+    row2.appendChild(this.domainSelect);
+    this.contentWrapper.appendChild(row2);
     
-    this.contentWrapper.appendChild(this.domainSelect);
+    // ROW 3: Go button and checkboxes
+    const row3 = document.createElement('div');
+    row3.className = 'env-switcher-floating__row';
     
     // Create Go button
     this.goButton = document.createElement('button');
-    this.goButton.className = 'env-switcher-floating__go';
+    this.goButton.className = 'env-switcher-floating__action-btn';
     this.goButton.textContent = 'Go';
+    this.goButton.addEventListener('click', () => this.navigateToSelectedEnvironment());
     
     // Only show if auto-redirect is disabled
     if (this.autoRedirect) {
       this.goButton.style.display = 'none';
     }
     
-    this.contentWrapper.appendChild(this.goButton);
+    row3.appendChild(this.goButton);
     
-    // Add elements to container - toggle button first for better clickability
+    // Auto-redirect checkbox
+    const autoRedirectContainer = document.createElement('div');
+    autoRedirectContainer.className = 'env-switcher-floating__checkbox-container';
+    
+    const autoRedirectCheckbox = document.createElement('input');
+    autoRedirectCheckbox.type = 'checkbox';
+    autoRedirectCheckbox.id = 'floating-auto-redirect';
+    autoRedirectCheckbox.checked = this.autoRedirect;
+    autoRedirectCheckbox.addEventListener('change', () => {
+      this.autoRedirect = autoRedirectCheckbox.checked;
+      this.goButton.style.display = this.autoRedirect ? 'none' : 'inline-block';
+      EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.AUTO_REDIRECT, this.autoRedirect);
+    });
+    
+    const autoRedirectLabel = document.createElement('label');
+    autoRedirectLabel.htmlFor = 'floating-auto-redirect';
+    autoRedirectLabel.textContent = 'Auto';
+    
+    autoRedirectContainer.appendChild(autoRedirectCheckbox);
+    autoRedirectContainer.appendChild(autoRedirectLabel);
+    row3.appendChild(autoRedirectContainer);
+    
+    // New window checkbox
+    const newWindowContainer = document.createElement('div');
+    newWindowContainer.className = 'env-switcher-floating__checkbox-container';
+    
+    const newWindowCheckbox = document.createElement('input');
+    newWindowCheckbox.type = 'checkbox';
+    newWindowCheckbox.id = 'floating-new-window';
+    newWindowCheckbox.checked = this.newWindow;
+    newWindowCheckbox.addEventListener('change', () => {
+      this.newWindow = newWindowCheckbox.checked;
+      EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.NEW_WINDOW, this.newWindow);
+    });
+    
+    const newWindowLabel = document.createElement('label');
+    newWindowLabel.htmlFor = 'floating-new-window';
+    newWindowLabel.textContent = 'New';
+    
+    newWindowContainer.appendChild(newWindowCheckbox);
+    newWindowContainer.appendChild(newWindowLabel);
+    row3.appendChild(newWindowContainer);
+    
+    this.contentWrapper.appendChild(row3);
+    
+    // ROW 4: Copy path and Copy URL buttons
+    const row4 = document.createElement('div');
+    row4.className = 'env-switcher-floating__row';
+    
+    // Copy path button
+    const copyPathButton = document.createElement('button');
+    copyPathButton.className = 'env-switcher-floating__action-btn';
+    copyPathButton.textContent = 'Copy Path';
+    copyPathButton.addEventListener('click', () => {
+      const path = window.location.pathname + window.location.search + window.location.hash;
+      navigator.clipboard.writeText(path).then(() => {
+        copyPathButton.textContent = 'Copied!';
+        setTimeout(() => {
+          copyPathButton.textContent = 'Copy Path';
+        }, 1500);
+      });
+    });
+    row4.appendChild(copyPathButton);
+    
+    // Copy URL button
+    const copyUrlButton = document.createElement('button');
+    copyUrlButton.className = 'env-switcher-floating__action-btn';
+    copyUrlButton.textContent = 'Copy URL';
+    copyUrlButton.addEventListener('click', () => {
+      const url = this.buildTargetUrl();
+      navigator.clipboard.writeText(url).then(() => {
+        copyUrlButton.textContent = 'Copied!';
+        setTimeout(() => {
+          copyUrlButton.textContent = 'Copy URL';
+        }, 1500);
+      });
+    });
+    row4.appendChild(copyUrlButton);
+    
+    this.contentWrapper.appendChild(row4);
+    
+    // Add elements to container
     this.container.appendChild(this.toggleButton);
     this.container.appendChild(this.contentWrapper);
-  }
-  
-  // Attach event handlers
-  attachEventHandlers() {
-    // Toggle button handler
-    this.toggleButton.addEventListener('click', () => {
-      this.collapsed = !this.collapsed;
-      
-      if (this.collapsed) {
-        this.container.classList.add('env-switcher-floating--collapsed');
-        this.toggleButton.innerHTML = '⊕';
-        this.toggleButton.title = 'Expand environment switcher';
-      } else {
-        this.container.classList.remove('env-switcher-floating--collapsed');
-        this.toggleButton.innerHTML = '⊖';
-        this.toggleButton.title = 'Collapse environment switcher';
-      }
-      
-      // Save collapsed state
-      EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.COLLAPSED_STATE, this.collapsed);
-    });
     
-    // Project select handler (if exists)
-    if (this.projectSelect) {
-      this.projectSelect.addEventListener('change', () => {
-        const selectedProjectName = this.projectSelect.value;
-        const selectedProject = this.projects.find(p => p.name === selectedProjectName);
-        
-        if (selectedProject) {
-          this.currentProject = selectedProject;
-          this.updateDomainSelect();
-        }
-      });
-    }
+    // Add to document
+    document.body.appendChild(this.container);
     
-    // Domain select handler
-    this.domainSelect.addEventListener('change', () => {
-      // Update protocol if forced
-      const forcedProtocol = EnvSwitcher.protocol.getForcedProtocol(this.domainSelect.value, this.protocolRules);
-      if (forcedProtocol) {
-        this.protocolSelect.value = forcedProtocol;
-        this.protocolSelect.disabled = true;
-      } else if (this.protocolSelect) {
-        this.protocolSelect.disabled = false;
-      }
-      
-      // Navigate if auto-redirect is enabled
-      if (this.autoRedirect) {
-        this.navigateToSelectedUrl();
-      }
-      
-      // Auto-collapse after selection if enabled
-      if (this.autoCollapse) {
-        this.collapsed = true;
-        this.container.classList.add('env-switcher-floating--collapsed');
-        this.toggleButton.innerHTML = '⊕';
-      }
-    });
-    
-    // Protocol select handler
-    if (this.protocolSelect) {
-      this.protocolSelect.addEventListener('change', () => {
-        // Navigate if auto-redirect is enabled
-        if (this.autoRedirect) {
-          this.navigateToSelectedUrl();
-        }
-      });
-    }
-    
-    // Go button handler
-    this.goButton.addEventListener('click', () => {
-      this.navigateToSelectedUrl();
-    });
+    // Add event listeners
+    this.addEventListeners();
   }
   
   // Update the domain select based on the current project
-  updateDomainSelect() {
-    // Clear existing options
-    this.domainSelect.innerHTML = '';
+  updateDomainOptions() {
+    // Clear current options
+    while (this.domainSelect.firstChild) {
+      this.domainSelect.removeChild(this.domainSelect.firstChild);
+    }
     
-    // Add domains from current project
-    this.currentProject.domains.forEach(domain => {
-      const option = document.createElement('option');
-      option.value = domain;
-      option.textContent = domain;
-      this.domainSelect.appendChild(option);
-    });
-    
-    // Select first domain
-    if (this.currentProject.domains.length > 0) {
-      this.domainSelect.value = this.currentProject.domains[0];
-      
-      // Update protocol if forced
-      const forcedProtocol = EnvSwitcher.protocol.getForcedProtocol(this.domainSelect.value, this.protocolRules);
-      if (forcedProtocol && this.protocolSelect) {
+    // Add domain options for current project
+    if (this.currentProject) {
+      this.currentProject.domains.forEach(domain => {
+        const option = document.createElement('option');
+        option.value = domain;
+        option.textContent = domain;
+        option.selected = domain === this.currentHostname;
+        this.domainSelect.appendChild(option);
+      });
+    }
+
+    // Update protocols if necessary
+    if (this.protocolSelect && this.enforceProtocols) {
+      const forcedProtocol = EnvSwitcher.protocol.getForcedProtocol(this.currentProject, this.domainSelect.value);
+      if (forcedProtocol) {
         this.protocolSelect.value = forcedProtocol;
         this.protocolSelect.disabled = true;
-      } else if (this.protocolSelect) {
+      } else {
         this.protocolSelect.disabled = false;
-      }
-      
-      // Navigate if auto-redirect is enabled
-      if (this.autoRedirect) {
-        this.navigateToSelectedUrl();
       }
     }
   }
   
   // Navigate to the selected URL
-  navigateToSelectedUrl() {
-    const url = EnvSwitcher.url.buildUrl(
-      this.domainSelect.value,
-      this.protocolSelect ? this.protocolSelect.value : window.location.protocol,
-      this.currentPath,
-      this.protocolRules
-    );
+  navigateToSelectedEnvironment() {
+    const project = this.currentProject;
+    const domain = this.domainSelect.value;
+    const protocol = this.protocolSelect ? this.protocolSelect.value : 'https';
     
-    // Navigate to the new URL
+    // Build the URL
+    const url = EnvSwitcher.buildUrl(project, domain, protocol);
+    
+    // Navigate to the URL
     if (this.newWindow) {
       window.open(url, '_blank');
     } else {
@@ -443,6 +461,170 @@ class EnvSwitcherUI {
     } else {
       console.log(`Project not found: ${projectName}`);
     }
+  }
+  
+  // Helper method to show a toast notification
+  showToast(message) {
+    const toast = document.createElement('div');
+    toast.style.position = 'fixed';
+    toast.style.bottom = '70px';
+    toast.style.right = '20px';
+    toast.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    toast.style.color = 'white';
+    toast.style.padding = '10px 20px';
+    toast.style.borderRadius = '4px';
+    toast.style.zIndex = '1000000';
+    toast.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transition = 'opacity 0.5s ease';
+      
+      setTimeout(() => {
+        document.body.removeChild(toast);
+      }, 500);
+    }, 2000);
+  }
+  
+  // Helper method to build URL with current settings
+  buildURL() {
+    let protocol = this.currentProtocol;
+    
+    // Check if there's a forced protocol for this domain
+    const forcedProtocol = EnvSwitcher.getForcedProtocol(this.currentHostname);
+    if (forcedProtocol) {
+      protocol = forcedProtocol;
+    }
+    
+    return protocol + '://' + this.currentHostname + window.location.pathname + window.location.search + window.location.hash;
+  }
+  
+  // Save settings
+  saveSettings() {
+    EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.PROJECTS, this.projects);
+    EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.PROTOCOL_RULES, this.protocolRules);
+    EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.SHOW_PROTOCOL, this.showProtocol);
+    EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.AUTO_COLLAPSE, this.autoCollapse);
+    EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.AUTO_REDIRECT, this.autoRedirect);
+    EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.NEW_WINDOW, this.newWindow);
+    EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.COLLAPSED_STATE, this.collapsed);
+  }
+  
+  toggleCollapse() {
+    this.collapsed = !this.collapsed;
+    this.container.classList.toggle('env-switcher-floating--collapsed');
+    this.toggleButton.innerHTML = this.collapsed ? '⊕' : '⊖';
+    this.toggleButton.title = this.collapsed ? 'Expand environment switcher' : 'Collapse environment switcher';
+    
+    // Save collapsed state
+    EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.COLLAPSED, this.collapsed);
+  }
+  
+  // Build target URL for links or copying
+  buildTargetUrl() {
+    const targetProtocol = this.protocolSelect ? this.protocolSelect.value : window.location.protocol.replace(':', '');
+    const targetDomain = this.domainSelect.value;
+    const currentPath = window.location.pathname + window.location.search + window.location.hash;
+    
+    return EnvSwitcher.url.buildUrl(
+      targetDomain,
+      targetProtocol,
+      currentPath
+    );
+  }
+
+  /**
+   * Adds event listeners to UI elements
+   */
+  addEventListeners() {
+    // Domain select event listener
+    this.domainSelect.addEventListener('change', () => {
+      // Update protocol if necessary
+      if (this.protocolSelect && this.enforceProtocols) {
+        const forcedProtocol = EnvSwitcher.protocol.getForcedProtocol(this.currentProject, this.domainSelect.value);
+        if (forcedProtocol) {
+          this.protocolSelect.value = forcedProtocol;
+          this.protocolSelect.disabled = true;
+        } else {
+          this.protocolSelect.disabled = false;
+        }
+      }
+
+      // Auto-redirect if enabled
+      if (this.autoRedirect) {
+        this.navigateToSelectedEnvironment();
+      }
+    });
+
+    // Protocol select event listener
+    if (this.protocolSelect) {
+      this.protocolSelect.addEventListener('change', () => {
+        this.currentProtocol = this.protocolSelect.value;
+        
+        // Auto-redirect if enabled
+        if (this.autoRedirect) {
+          this.navigateToSelectedEnvironment();
+        }
+      });
+    }
+  }
+
+  /**
+   * Copies the current URL to the clipboard
+   */
+  copyCurrentUrl() {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url).then(() => {
+      this.showFeedbackMessage('URL copied to clipboard!');
+    });
+  }
+
+  /**
+   * Copies the current path to the clipboard
+   */
+  copyCurrentPath() {
+    const path = window.location.pathname + window.location.search + window.location.hash;
+    navigator.clipboard.writeText(path).then(() => {
+      this.showFeedbackMessage('Path copied to clipboard!');
+    });
+  }
+
+  /**
+   * Shows a feedback message
+   * @param {string} message - The message to show
+   */
+  showFeedbackMessage(message) {
+    const feedback = document.createElement('div');
+    feedback.className = 'env-switcher-floating__feedback';
+    feedback.textContent = message;
+    
+    this.container.appendChild(feedback);
+    
+    // Remove after 2 seconds
+    setTimeout(() => {
+      this.container.removeChild(feedback);
+    }, 2000);
+  }
+
+  /**
+   * Initializes the UI
+   */
+  init() {
+    // Skip if no projects are defined
+    if (!this.projects || this.projects.length === 0) {
+      return;
+    }
+
+    this.buildUI();
+    
+    // Add event listeners
+    this.addEventListeners();
+    
+    // Add the container to the page
+    document.body.appendChild(this.container);
   }
 }
 
