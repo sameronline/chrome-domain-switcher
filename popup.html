@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Environment Switcher</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="env-switcher">
+    <div class="env-switcher__header">
+      <h2>Environment Switcher</h2>
+    </div>
+    
+    <div class="env-switcher__row">
+      <label for="protocol">Protocol:</label>
+      <select id="protocol" class="env-switcher__select">
+        <option value="https:">https://</option>
+        <option value="http:">http://</option>
+      </select>
+    </div>
+    
+    <div class="env-switcher__row">
+      <label for="domain">Domain:</label>
+      <select id="domain" class="env-switcher__select"></select>
+    </div>
+    
+    <div class="env-switcher__action-row">
+      <button id="go-btn" class="env-switcher__go-btn">Go</button>
+      
+      <div class="env-switcher__options">
+        <div class="env-switcher__checkbox-container">
+          <input type="checkbox" id="auto-redirect" checked>
+          <label for="auto-redirect">Auto-redirect</label>
+        </div>
+        <div class="env-switcher__checkbox-container">
+          <input type="checkbox" id="new-window">
+          <label for="new-window">New window</label>
+        </div>
+      </div>
+    </div>
+    
+    <div class="env-switcher__copy-buttons">
+      <button id="copy-path" class="env-switcher__copy-btn" title="Copy current path">
+        <span class="icon">📋</span> Path
+      </button>
+      <button id="copy-url" class="env-switcher__copy-btn" title="Copy URL with selected domain">
+        <span class="icon">🔗</span> URL
+      </button>
+    </div>
+    
+    <div class="env-switcher__footer">
+      <button id="configure-btn" class="env-switcher__config-btn">Configure Domains</button>
+      <button id="toggle-floating" class="env-switcher__toggle-btn">Toggle Floating UI</button>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html> 
