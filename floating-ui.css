@@ -1,7 +1,7 @@
 /* Environment Switcher Floating UI */
 .env-switcher-floating {
   position: fixed;
-  top: 20px;
+  bottom: 20px;
   right: 20px;
   background: var(--primary-bg, #fff);
   border: 1px solid var(--border-color, #ddd);
@@ -11,8 +11,8 @@
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 14px;
   transition: all 0.3s ease;
-  max-width: 100%;
   width: auto;
+  height: max-content;
 }
 
 .env-switcher-floating__content {
