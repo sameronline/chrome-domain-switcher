@@ -66,10 +66,19 @@ class EnvSwitcherUI {
       this.findCurrentProject();
       
       // Initialize if the current project has floating UI enabled
-      if (this.currentProject && this.currentProject.floatingEnabled === true) {
+      if (this.currentProject && this.currentProject.floatingEnabled) {
         this.enabled = true;
         this.initialize();
       }
+      
+      // Debug information to help diagnose the issue
+      console.log('Environment Switcher:', {
+        currentHostname: this.currentHostname,
+        currentProject: this.currentProject ? this.currentProject.name : 'none',
+        enabled: this.enabled,
+        floatingEnabled: this.currentProject ? this.currentProject.floatingEnabled : undefined,
+        projects: this.projects.map(p => ({ name: p.name, domains: p.domains, enabled: p.floatingEnabled }))
+      });
     });
   }
   
@@ -376,33 +385,57 @@ class EnvSwitcherUI {
   appendToDOM() {
     // Only append if container exists
     if (this.container) {
-      document.body.appendChild(this.container);
+      // Check if already in DOM to avoid duplicates
+      if (!this.container.parentNode) {
+        try {
+          document.body.appendChild(this.container);
+          console.log('Environment Switcher UI appended to DOM');
+        } catch (e) {
+          console.error('Failed to append Environment Switcher UI to DOM:', e);
+        }
+      }
+    } else {
+      console.warn('Cannot append Environment Switcher UI: container not created');
     }
   }
   
   // Show the UI
   show() {
-    this.container.style.display = 'block';
+    if (this.container) {
+      this.container.style.display = 'flex';
+      console.log('Environment Switcher UI shown');
+    }
   }
   
   // Hide the UI
   hide() {
-    this.container.style.display = 'none';
+    if (this.container) {
+      this.container.style.display = 'none';
+      console.log('Environment Switcher UI hidden');
+    }
   }
   
   // Toggle the UI visibility
   toggle() {
-    if (this.container.style.display === 'none') {
-      this.show();
-    } else {
-      this.hide();
+    if (this.container) {
+      if (this.container.style.display === 'none') {
+        this.show();
+      } else {
+        this.hide();
+      }
     }
   }
   
   // Destroy the UI
   destroy() {
     if (this.container && this.container.parentNode) {
-      this.container.parentNode.removeChild(this.container);
+      try {
+        this.container.parentNode.removeChild(this.container);
+        console.log('Environment Switcher UI removed from DOM');
+        this.container = null;
+      } catch (e) {
+        console.error('Failed to remove Environment Switcher UI from DOM:', e);
+      }
     }
   }
   
@@ -460,8 +493,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
-  // Create the UI instance - it will check if it should be displayed
-  envSwitcherUI = new EnvSwitcherUI();
-}); 
+// Function to ensure the UI is initialized
+function initializeUI() {
+  if (!envSwitcherUI) {
+    console.log('Initializing Environment Switcher UI');
+    envSwitcherUI = new EnvSwitcherUI();
+  }
+}
+
+// Initialize on page load - with both DOMContentLoaded and window load events to ensure it runs
+document.addEventListener('DOMContentLoaded', initializeUI);
+
+// Backup initialization in case DOMContentLoaded already fired
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  console.log('Document already loaded, initializing Environment Switcher UI now');
+  setTimeout(initializeUI, 100); // Small delay to ensure other scripts have run
+} 

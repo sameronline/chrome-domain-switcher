@@ -11,6 +11,8 @@
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .env-switcher-floating--collapsed {
@@ -23,7 +25,7 @@
 }
 
 .env-switcher-floating--collapsed .env-switcher-floating__content {
-  display: none;
+  display: none !important;
 }
 
 .env-switcher-floating__content {
@@ -31,6 +33,7 @@
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .env-switcher-floating__toggle {
@@ -51,6 +54,16 @@
   z-index: 1000000;
   position: relative;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  outline: none;
+}
+
+.env-switcher-floating__toggle:hover {
+  background: #45a049;
+}
+
+.env-switcher-floating__toggle:active {
+  background: #3d8b40;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .env-switcher-floating__project,
@@ -60,6 +73,9 @@
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
+  flex: 1;
+  min-width: 120px;
+  max-width: 200px;
 }
 
 .env-switcher-floating__go {
@@ -69,4 +85,13 @@
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  font-weight: bold;
+}
+
+.env-switcher-floating__go:hover {
+  background: #0b7dda;
+}
+
+.env-switcher-floating__go:active {
+  background: #0a69b7;
 } 
