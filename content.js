@@ -82,7 +82,7 @@ class EnvSwitcherUI {
     }
     
     // Attach event handlers
-    this.attachEventHandlers();
+    this.addEventListeners();
     
     // Add to the DOM
     this.appendToDOM();
