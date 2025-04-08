@@ -42,11 +42,17 @@ document.addEventListener('DOMContentLoaded', function() {
       newWindowCheckbox.checked = newWindow;
       
       // Check if Go button should be shown based on auto-redirect
-      goButton.style.display = autoRedirect ? 'none' : 'block';
+      updateGoButtonVisibility();
       
       // Get current tab information
       getCurrentTabInfo();
     });
+  }
+  
+  function updateGoButtonVisibility() {
+    // If auto-redirect is enabled, just reduce opacity but keep visible
+    goButton.style.opacity = autoRedirect ? '0.5' : '1';
+    goButton.style.pointerEvents = autoRedirect ? 'none' : 'auto';
   }
   
   // Get information about the current tab
@@ -54,28 +60,39 @@ document.addEventListener('DOMContentLoaded', function() {
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
       if (tabs && tabs.length > 0) {
         const tab = tabs[0];
-        const url = new URL(tab.url);
         
-        currentUrl = tab.url;
-        currentProtocol = url.protocol;
-        currentHostname = url.hostname;
-        currentPath = url.pathname + url.search + url.hash;
-        
-        // Update protocol select
-        protocolSelect.value = currentProtocol;
-        
-        // Check for protocol rules
-        const forcedProtocol = getForcedProtocol(currentHostname);
-        if (forcedProtocol) {
-          protocolSelect.value = forcedProtocol;
+        try {
+          const url = new URL(tab.url);
+          
+          currentUrl = tab.url;
+          currentProtocol = url.protocol;
+          currentHostname = url.hostname;
+          currentPath = url.pathname + url.search + url.hash;
+          
+          // Update protocol select
+          protocolSelect.value = currentProtocol;
+          
+          // Check for protocol rules
+          const forcedProtocol = getForcedProtocol(currentHostname);
+          if (forcedProtocol) {
+            protocolSelect.value = forcedProtocol;
+            protocolSelect.disabled = true;
+          } else {
+            protocolSelect.disabled = false;
+          }
+          
+          // Find current project and populate dropdowns
+          findCurrentProject();
+          populateProjects();
+        } catch (e) {
+          console.error('Error parsing URL:', e);
+          // Handle non-HTTP URLs (e.g., chrome://, about:, etc.)
+          projectSelect.disabled = true;
+          domainSelect.disabled = true;
           protocolSelect.disabled = true;
-        } else {
-          protocolSelect.disabled = false;
+          goButton.disabled = true;
+          copyUrlButton.disabled = true;
         }
-        
-        // Find current project and populate dropdowns
-        findCurrentProject();
-        populateProjects();
       }
     });
   }
@@ -154,6 +171,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (currentProject) {
       const isEnabled = currentProject.floatingEnabled === true;
       toggleFloatingButton.textContent = isEnabled ? 'Disable Floating UI' : 'Enable Floating UI';
+      toggleFloatingButton.style.background = isEnabled ? '#e74c3c' : 'var(--secondary-color)';
     }
   }
   
@@ -214,13 +232,21 @@ document.addEventListener('DOMContentLoaded', function() {
   function copyToClipboard(text, button) {
     navigator.clipboard.writeText(text).then(() => {
       const originalText = button.textContent;
-      button.innerHTML = '<span class="icon">✓</span> Copied!';
+      const originalBg = button.style.background;
+      
+      button.textContent = '✓ Copied!';
+      button.style.background = 'var(--secondary-color)';
       
       setTimeout(() => {
-        button.innerHTML = originalText;
-      }, 2000);
+        button.textContent = originalText;
+        button.style.background = originalBg;
+      }, 1500);
     }).catch(err => {
       console.error('Could not copy text: ', err);
+      button.textContent = '❌ Error';
+      setTimeout(() => {
+        button.textContent = originalText;
+      }, 1500);
     });
   }
   
@@ -267,7 +293,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Event: Auto-redirect checkbox change
   autoRedirectCheckbox.addEventListener('change', function() {
     autoRedirect = this.checked;
-    goButton.style.display = autoRedirect ? 'none' : 'block';
+    updateGoButtonVisibility();
     
     // Save preference
     chrome.storage.sync.set({ autoRedirect: autoRedirect });
@@ -292,7 +318,8 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   
   // Event: Configure button click
-  configureButton.addEventListener('click', function() {
+  configureButton.addEventListener('click', function(e) {
+    e.preventDefault();
     chrome.runtime.openOptionsPage();
   });
   

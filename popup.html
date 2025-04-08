@@ -11,51 +11,49 @@
       <h2>Environment Switcher</h2>
     </div>
     
+    <!-- Row 1: Project, URL/Domain, Protocol -->
     <div class="env-switcher__row">
-      <label for="project">Project:</label>
-      <select id="project" class="env-switcher__select"></select>
-    </div>
-    
-    <div class="env-switcher__row">
-      <label for="protocol">Protocol:</label>
-      <select id="protocol" class="env-switcher__select">
+      <select id="project" class="env-switcher__select" title="Select Project"></select>
+      <select id="domain" class="env-switcher__select" title="Select Domain"></select>
+      <select id="protocol" class="env-switcher__select" title="Select Protocol">
         <option value="https:">https://</option>
         <option value="http:">http://</option>
       </select>
     </div>
     
+    <!-- Row 2: Open button, Auto-redirect, New window -->
     <div class="env-switcher__row">
-      <label for="domain">Domain:</label>
-      <select id="domain" class="env-switcher__select"></select>
-    </div>
-    
-    <div class="env-switcher__action-row">
-      <button id="go-btn" class="env-switcher__go-btn">Go</button>
+      <button id="go-btn" class="env-switcher__action-btn">Open</button>
       
-      <div class="env-switcher__options">
-        <div class="env-switcher__checkbox-container">
-          <input type="checkbox" id="auto-redirect" checked>
-          <label for="auto-redirect">Auto-redirect</label>
-        </div>
-        <div class="env-switcher__checkbox-container">
-          <input type="checkbox" id="new-window">
-          <label for="new-window">New window</label>
-        </div>
+      <div class="env-switcher__checkbox-container">
+        <input type="checkbox" id="auto-redirect" checked>
+        <label for="auto-redirect">Auto-redirect</label>
+      </div>
+      
+      <div class="env-switcher__checkbox-container">
+        <input type="checkbox" id="new-window">
+        <label for="new-window">New window</label>
       </div>
     </div>
     
-    <div class="env-switcher__copy-buttons">
-      <button id="copy-path" class="env-switcher__copy-btn" title="Copy current path">
-        <span class="icon">📋</span> Path
+    <!-- Row 3: Copy path, Copy URL -->
+    <div class="env-switcher__row">
+      <button id="copy-path" class="env-switcher__action-btn" title="Copy current path">
+        <span class="icon">📋</span> Copy Path
       </button>
-      <button id="copy-url" class="env-switcher__copy-btn" title="Copy URL with selected domain">
-        <span class="icon">🔗</span> URL
+      <button id="copy-url" class="env-switcher__action-btn" title="Copy URL with selected domain">
+        <span class="icon">🔗</span> Copy URL
       </button>
     </div>
     
-    <div class="env-switcher__footer">
-      <button id="configure-btn" class="env-switcher__config-btn">Configure Projects</button>
+    <!-- Row 4: Toggle floating UI -->
+    <div class="env-switcher__row">
       <button id="toggle-floating" class="env-switcher__toggle-btn">Toggle Floating UI</button>
+    </div>
+    
+    <!-- Hidden link to configuration -->
+    <div class="env-switcher__footer">
+      <a href="#" id="configure-btn" class="env-switcher__config-link">Configure Projects</a>
     </div>
   </div>
   <script src="popup.js"></script>

@@ -1,5 +1,6 @@
 :root {
   --primary-color: #0074d9;
+  --secondary-color: #2ecc40;
   --border-color: #ddd;
   --bg-color: #fff;
   --text-color: #333;
@@ -10,7 +11,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   margin: 0;
   padding: 0;
-  width: 320px;
+  width: 350px;
   color: var(--text-color);
   background: var(--bg-color);
 }
@@ -20,12 +21,12 @@ body {
 }
 
 .env-switcher__header {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   border-bottom: 1px solid var(--border-color);
 }
 
 .env-switcher__header h2 {
-  margin: 0 0 10px 0;
+  margin: 0 0 8px 0;
   font-size: 18px;
   font-weight: 500;
 }
@@ -34,104 +35,83 @@ body {
   display: flex;
   align-items: center;
   margin-bottom: 12px;
+  gap: 8px;
 }
 
-.env-switcher__row label {
-  flex: 0 0 80px;
-  font-size: 14px;
+.env-switcher__row:last-of-type {
+  margin-bottom: 0;
 }
 
 .env-switcher__select {
   flex: 1;
-  padding: 6px 8px;
+  padding: 8px;
   border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 14px;
+  min-width: 0; /* Allows flexbox to shrink inputs below min-content */
 }
 
-.env-switcher__action-row {
-  display: flex;
-  margin-bottom: 16px;
-  align-items: center;
-}
-
-.env-switcher__go-btn {
+.env-switcher__action-btn {
+  flex: 1;
   background: var(--primary-color);
   color: white;
   border: none;
   border-radius: 4px;
-  padding: 6px 12px;
+  padding: 8px 12px;
   cursor: pointer;
-  margin-right: 12px;
   font-size: 14px;
+  text-align: center;
+  white-space: nowrap;
 }
 
-.env-switcher__go-btn:hover {
+.env-switcher__action-btn:hover {
   opacity: 0.9;
-}
-
-.env-switcher__options {
-  display: flex;
-  flex-direction: column;
 }
 
 .env-switcher__checkbox-container {
   display: flex;
   align-items: center;
-  margin-bottom: 6px;
+  flex: 1;
   font-size: 14px;
+  white-space: nowrap;
 }
 
 .env-switcher__checkbox-container input[type="checkbox"] {
   margin-right: 6px;
 }
 
-.env-switcher__copy-buttons {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.env-switcher__copy-btn {
-  flex: 1;
-  padding: 6px 10px;
-  background: #f0f0f0;
-  border: 1px solid var(--border-color);
+.env-switcher__toggle-btn {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--secondary-color);
+  color: white;
+  border: none;
   border-radius: 4px;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   font-size: 14px;
+  font-weight: bold;
 }
 
-.env-switcher__copy-btn:hover {
-  background: var(--hover-color);
-}
-
-.env-switcher__copy-btn .icon {
-  margin-right: 6px;
+.env-switcher__toggle-btn:hover {
+  opacity: 0.9;
 }
 
 .env-switcher__footer {
-  display: flex;
-  gap: 8px;
-  border-top: 1px solid var(--border-color);
-  padding-top: 12px;
+  margin-top: 8px;
+  font-size: 12px;
+  text-align: center;
+  opacity: 0.6;
 }
 
-.env-switcher__config-btn,
-.env-switcher__toggle-btn {
-  flex: 1;
-  padding: 6px 10px;
-  background: #f0f0f0;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
+.env-switcher__config-link {
+  color: var(--primary-color);
+  text-decoration: none;
 }
 
-.env-switcher__config-btn:hover,
-.env-switcher__toggle-btn:hover {
-  background: var(--hover-color);
+.env-switcher__config-link:hover {
+  text-decoration: underline;
+}
+
+.icon {
+  margin-right: 6px;
 } 
