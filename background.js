@@ -8,7 +8,8 @@ chrome.runtime.onInstalled.addListener(function(details) {
       projects: [
         {
           name: "Example Project",
-          domains: ["dev.example.com", "stage.example.com", "www.example.com"]
+          domains: ["dev.example.com", "stage.example.com", "www.example.com"],
+          floatingEnabled: false
         }
       ],
       protocolRules: [
@@ -21,7 +22,6 @@ chrome.runtime.onInstalled.addListener(function(details) {
       autoCollapse: true,
       autoRedirect: true,
       newWindow: false,
-      floatingEnabled: false,
       collapsedState: true
     }, function() {
       console.log('Default settings initialized');

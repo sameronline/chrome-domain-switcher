@@ -14,7 +14,8 @@ document.addEventListener('DOMContentLoaded', function() {
     projects: [
       {
         name: "Example Project",
-        domains: ["dev.example.com", "stage.example.com", "www.example.com"]
+        domains: ["dev.example.com", "stage.example.com", "www.example.com"],
+        floatingEnabled: false
       }
     ],
     protocolRules: [
@@ -97,7 +98,33 @@ document.addEventListener('DOMContentLoaded', function() {
       projectHeader.appendChild(projectControls);
       projectDiv.appendChild(projectHeader);
       
+      // Project settings
+      const projectSettings = document.createElement('div');
+      projectSettings.className = 'project-settings';
+      
+      // Floating UI toggle
+      const floatingToggleLabel = document.createElement('label');
+      floatingToggleLabel.className = 'toggle-label';
+      
+      const floatingToggleCheckbox = document.createElement('input');
+      floatingToggleCheckbox.type = 'checkbox';
+      floatingToggleCheckbox.checked = project.floatingEnabled === true;
+      floatingToggleCheckbox.addEventListener('change', function() {
+        projects[projectIndex].floatingEnabled = this.checked;
+      });
+      
+      floatingToggleLabel.appendChild(floatingToggleCheckbox);
+      floatingToggleLabel.appendChild(document.createTextNode(' Enable floating UI for this project'));
+      
+      projectSettings.appendChild(floatingToggleLabel);
+      projectDiv.appendChild(projectSettings);
+      
       // Domain list
+      const domainsHeader = document.createElement('h4');
+      domainsHeader.textContent = 'Domains';
+      domainsHeader.className = 'domain-header';
+      projectDiv.appendChild(domainsHeader);
+      
       const domainsDiv = document.createElement('div');
       domainsDiv.className = 'domain-list';
       
@@ -175,7 +202,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     projects.push({
       name: projectName,
-      domains: []
+      domains: [],
+      floatingEnabled: false
     });
     
     updateProjectsUI();

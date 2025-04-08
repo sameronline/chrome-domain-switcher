@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', function() {
   // User preferences
   let autoRedirect = true;
   let newWindow = false;
-  let floatingEnabled = false;
   let projects = [];
   let protocolRules = [];
   
@@ -31,14 +30,12 @@ document.addEventListener('DOMContentLoaded', function() {
       projects: [],
       protocolRules: [],
       autoRedirect: true,
-      newWindow: false,
-      floatingEnabled: false
+      newWindow: false
     }, function(items) {
       projects = items.projects;
       protocolRules = items.protocolRules;
       autoRedirect = items.autoRedirect;
       newWindow = items.newWindow;
-      floatingEnabled = items.floatingEnabled;
       
       // Update UI based on preferences
       autoRedirectCheckbox.checked = autoRedirect;
@@ -112,9 +109,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // If we found the current project, populate its domains
     if (currentProject) {
       populateDomains(currentProject);
+      updateToggleButton();
     } else if (projects.length > 0) {
       // If current domain isn't in any project, select the first project
       populateDomains(projects[0]);
+      updateToggleButton();
     }
   }
   
@@ -144,6 +143,17 @@ document.addEventListener('DOMContentLoaded', function() {
       option.textContent = currentHostname + ' (current)';
       option.selected = true;
       domainSelect.appendChild(option);
+    }
+    
+    // Update toggle button for the selected project
+    updateToggleButton();
+  }
+  
+  // Update the toggle button text based on current project's floating UI state
+  function updateToggleButton() {
+    if (currentProject) {
+      const isEnabled = currentProject.floatingEnabled === true;
+      toggleFloatingButton.textContent = isEnabled ? 'Disable Floating UI' : 'Enable Floating UI';
     }
   }
   
@@ -288,23 +298,37 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Event: Toggle floating UI button click
   toggleFloatingButton.addEventListener('click', function() {
-    floatingEnabled = !floatingEnabled;
+    if (!currentProject) return;
     
-    // Save preference
-    chrome.storage.sync.set({ floatingEnabled: floatingEnabled });
+    // Toggle the current project's floating UI status
+    currentProject.floatingEnabled = !currentProject.floatingEnabled;
     
-    // Send message to content script to toggle floating UI
-    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
-      if (tabs && tabs.length > 0) {
-        chrome.tabs.sendMessage(tabs[0].id, { 
-          action: 'toggleFloatingUI',
-          enabled: floatingEnabled
-        });
-      }
-    });
+    // Update UI
+    updateToggleButton();
     
-    // Update button text
-    this.textContent = floatingEnabled ? 'Disable Floating UI' : 'Enable Floating UI';
+    // Find the project index
+    const projectIndex = projects.findIndex(p => p.name === currentProject.name);
+    if (projectIndex !== -1) {
+      // Create a new projects array with the updated project
+      const updatedProjects = [...projects];
+      updatedProjects[projectIndex] = currentProject;
+      
+      // Save the updated projects to storage
+      chrome.storage.sync.set({ projects: updatedProjects }, function() {
+        console.log('Project toggle status saved');
+      });
+      
+      // Send message to content script to toggle floating UI for this project
+      chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+        if (tabs && tabs.length > 0) {
+          chrome.tabs.sendMessage(tabs[0].id, { 
+            action: 'toggleFloatingUI',
+            enabled: currentProject.floatingEnabled,
+            projectName: currentProject.name
+          });
+        }
+      });
+    }
   });
   
   // Initialize the extension
