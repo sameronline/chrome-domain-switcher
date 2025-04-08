@@ -441,34 +441,62 @@ class EnvSwitcherUI {
   
   // Enable floating UI for a specific project
   enableForProject(projectName) {
-    // Update the project's enabled status
-    if (this.currentProject && this.currentProject.name === projectName) {
-      this.enabled = true;
+    // Find the project by name
+    const project = this.projects.find(p => p.name === projectName);
+    
+    if (project) {
+      // Update the project's enabled status in storage
+      project.floatingEnabled = true;
       
-      // If UI already exists, show it
-      if (this.container) {
-        this.show();
-      } else {
-        // Otherwise initialize it
-        this.initialize();
+      // Update current project if it matches
+      if (this.currentProject && this.currentProject.name === projectName) {
+        this.currentProject.floatingEnabled = true;
+        this.enabled = true;
+        
+        // If UI already exists, show it
+        if (this.container) {
+          this.show();
+        } else {
+          // Otherwise initialize it
+          this.initialize();
+        }
       }
+      
+      // Save the updated projects to storage
+      chrome.storage.sync.set({ projects: this.projects }, () => {
+        console.log(`Floating UI enabled for project: ${projectName}`);
+      });
     } else {
-      console.log('Cannot enable floating UI: current domain not in project ' + projectName);
+      console.log(`Project not found: ${projectName}`);
     }
   }
   
   // Disable floating UI for a specific project
   disableForProject(projectName) {
-    // Update the project's enabled status
-    if (this.currentProject && this.currentProject.name === projectName) {
-      this.enabled = false;
+    // Find the project by name
+    const project = this.projects.find(p => p.name === projectName);
+    
+    if (project) {
+      // Update the project's enabled status in storage
+      project.floatingEnabled = false;
       
-      // If UI exists, hide it
-      if (this.container) {
-        this.hide();
+      // Update current project if it matches
+      if (this.currentProject && this.currentProject.name === projectName) {
+        this.currentProject.floatingEnabled = false;
+        this.enabled = false;
+        
+        // If UI exists, hide it
+        if (this.container) {
+          this.hide();
+        }
       }
+      
+      // Save the updated projects to storage
+      chrome.storage.sync.set({ projects: this.projects }, () => {
+        console.log(`Floating UI disabled for project: ${projectName}`);
+      });
     } else {
-      console.log('Cannot disable floating UI: current domain not in project ' + projectName);
+      console.log(`Project not found: ${projectName}`);
     }
   }
 }
@@ -483,13 +511,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       envSwitcherUI = new EnvSwitcherUI();
     }
     
-    if (message.enabled) {
-      envSwitcherUI.enableForProject(message.projectName);
-    } else {
-      envSwitcherUI.disableForProject(message.projectName);
-    }
+    // Wait a moment to ensure the UI is properly initialized
+    setTimeout(() => {
+      if (message.enabled) {
+        envSwitcherUI.enableForProject(message.projectName);
+      } else {
+        envSwitcherUI.disableForProject(message.projectName);
+      }
+      
+      sendResponse({ success: true });
+    }, 100);
     
-    sendResponse({ success: true });
+    // Return true to indicate we'll send a response asynchronously
+    return true;
   }
 });
 
