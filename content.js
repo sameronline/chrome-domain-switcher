@@ -116,14 +116,15 @@ class EnvSwitcherUI {
       console.log('No projects defined');
       return;
     }
-    
+
     // First, check for exact domain matches
     for (const project of this.projects) {
       if (project.domains) {
         for (const domainEntry of project.domains) {
           const domain = typeof domainEntry === 'string' ? domainEntry : domainEntry.domain;
           
-          if (domain === this.currentHostname) {
+          // Only check for exact (non-wildcard) matches first
+          if (!domain.includes('*') && domain === this.currentHostname) {
             this.currentProject = project;
             this.currentProjectDomains = project.domains;
             return;
@@ -138,7 +139,7 @@ class EnvSwitcherUI {
         for (const domainEntry of project.domains) {
           const domain = typeof domainEntry === 'string' ? domainEntry : domainEntry.domain;
           
-          // Skip non-wildcard domains since we already checked exact matches
+          // Only check wildcard domains now
           if (!domain.includes('*')) {
             continue;
           }
@@ -148,11 +149,26 @@ class EnvSwitcherUI {
             this.currentProject = project;
             this.currentProjectDomains = project.domains;
             
-            // Add the current domain to the domains list with wildcard pattern as label
-            const wildcardPattern = domain;
+            // Extract wildcard portion from domain for the label
+            function extractWildcardPortion(fullDomain, wildcardPattern) {
+              // If pattern is *-something.com, extract the part that matches *
+              if (wildcardPattern.startsWith('*')) {
+                const suffix = wildcardPattern.substring(1); // Remove the '*'
+                if (fullDomain.endsWith(suffix)) {
+                  return fullDomain.substring(0, fullDomain.length - suffix.length);
+                }
+              }
+              // For other patterns, fall back to the full domain
+              return fullDomain;
+            }
+            
+            // Extract the portion that matches the wildcard
+            const wildcardPortion = extractWildcardPortion(this.currentHostname, domain);
+            
+            // Add the current domain to the domains list with extracted portion as label
             const newDomainEntry = {
               domain: this.currentHostname,
-              label: wildcardPattern
+              label: wildcardPortion
             };
             
             // Check if domain is already in the list
@@ -167,7 +183,7 @@ class EnvSwitcherUI {
               
               // Save the updated project to storage
               EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.PROJECTS, this.projects, () => {
-                console.log(`Added domain ${this.currentHostname} to project ${project.name} with label ${wildcardPattern}`);
+                console.log(`Added domain ${this.currentHostname} to project ${project.name} with label ${wildcardPortion}`);
               });
             }
             

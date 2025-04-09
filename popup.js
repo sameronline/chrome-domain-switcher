@@ -60,6 +60,20 @@ document.addEventListener('DOMContentLoaded', function() {
       return projects;
     }
     
+    // Extract wildcard portion from domain
+    function extractWildcardPortion(fullDomain, wildcardPattern) {
+      // If pattern is *-something.com, extract the part that matches *
+      if (wildcardPattern.startsWith('*')) {
+        const suffix = wildcardPattern.substring(1); // Remove the '*'
+        if (fullDomain.endsWith(suffix)) {
+          return fullDomain.substring(0, fullDomain.length - suffix.length);
+        }
+      }
+      // If pattern is something.*.com, more complex logic would be needed
+      // For now returning full domain as fallback
+      return fullDomain;
+    }
+    
     // Check for wildcard matches
     let projectsUpdated = false;
     
@@ -74,10 +88,13 @@ document.addEventListener('DOMContentLoaded', function() {
           }
           
           if (matchesDomain(currentHostname, domain)) {
-            // Add the current domain to this project with the wildcard pattern as label
+            // Extract the portion that matches the wildcard
+            const wildcardPortion = extractWildcardPortion(currentHostname, domain);
+            
+            // Add the current domain to this project with the extracted portion as label
             project.domains.push({
               domain: currentHostname,
-              label: domain // Use the wildcard pattern as the label
+              label: wildcardPortion // Use the extracted portion as the label
             });
             
             projectsUpdated = true;
