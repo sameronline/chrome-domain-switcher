@@ -329,37 +329,42 @@ class HtmxEnvSwitcherUI {
   initialize() {
     console.log('Initializing htmx UI...');
     
-    // Load the htmx library if not already loaded
-    this.loadHtmxIfNeeded().then(() => {
-      console.log('HTMX library loaded successfully');
-      
-      // Fetch the HTML template
-      const templateUrl = chrome.runtime.getURL('floating-ui.html');
-      console.log('Fetching template from:', templateUrl);
-      
-      fetch(templateUrl)
-        .then(response => {
-          console.log('Template fetch response:', response.status);
-          return response.text();
-        })
-        .then(html => {
-          console.log('Template HTML loaded, length:', html.length);
-          this.processTemplate(html);
-        })
-        .catch(error => {
-          console.error('Error loading floating UI template:', error);
-          console.log('Using fallback template');
-          // Use fallback template
-          const fallbackTemplate = this.getFallbackTemplate();
-          this.processTemplate(fallbackTemplate);
-        });
-    }).catch(error => {
-      console.error('Error loading HTMX library:', error);
-    });
+    // First load htmx
+    this.loadHtmxIfNeeded()
+      .then(() => {
+        console.log('HTMX library loaded successfully, proceeding with template loading');
+        
+        // Now get the template
+        const templateUrl = chrome.runtime.getURL('floating-ui.html');
+        console.log('Fetching template from:', templateUrl);
+        
+        return fetch(templateUrl)
+          .then(response => {
+            console.log('Template fetch response:', response.status);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch template: ${response.statusText}`);
+            }
+            return response.text();
+          });
+      })
+      .then(html => {
+        console.log('Template HTML loaded, length:', html.length);
+        // Process the template once htmx is loaded
+        this.processTemplate(html);
+      })
+      .catch(error => {
+        console.error('Error during initialization:', error);
+        console.log('Using fallback template');
+        // Use fallback template as a last resort
+        const fallbackTemplate = this.getFallbackTemplate();
+        this.processTemplate(fallbackTemplate);
+      });
   }
   
   // Process the HTML template
   processTemplate(html) {
+    console.log('Processing HTML template...');
+    
     // Create a temporary div to hold the template
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html;
@@ -388,6 +393,16 @@ class HtmxEnvSwitcherUI {
     }
     
     console.log('Container element found, setting up UI');
+    
+    // Ensure htmx is initialized before we use any of its features
+    if (!window.htmx) {
+      console.error('HTMX not loaded yet but we need to proceed with UI setup');
+      // We'll still show the UI but without htmx functionality
+    } else {
+      console.log('HTMX is available, setting up htmx extension');
+      // Make sure the extension is loaded
+      this.loadChromeExtension();
+    }
     
     // Set collapsed state if needed
     if (this.collapsed) {
@@ -451,9 +466,6 @@ class HtmxEnvSwitcherUI {
     // Append to DOM
     document.body.appendChild(floatingUI);
     console.log('UI added to DOM');
-    
-    // Load the Chrome-htmx extension
-    this.loadChromeExtension();
   }
   
   // Get fallback template in case the HTML file can't be loaded
@@ -543,11 +555,26 @@ class HtmxEnvSwitcherUI {
         return;
       }
       
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/htmx.org@2.0.4';
-      script.onload = resolve;
-      script.onerror = reject;
-      document.head.appendChild(script);
+      try {
+        console.log('Loading htmx from local file...');
+        const scriptUrl = chrome.runtime.getURL('htmx.js');
+        console.log('Local htmx URL:', scriptUrl);
+        
+        const script = document.createElement('script');
+        script.src = scriptUrl;
+        script.onload = () => {
+          console.log('htmx loaded successfully from local file');
+          resolve();
+        };
+        script.onerror = (err) => {
+          console.error('Failed to load htmx from local file:', err);
+          reject(err);
+        };
+        document.head.appendChild(script);
+      } catch (err) {
+        console.error('Error setting up htmx:', err);
+        reject(err);
+      }
     });
   }
   

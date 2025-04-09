@@ -29,7 +29,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["floating-ui.html", "htmx-chrome-ext.js"],
+      "resources": ["floating-ui.html", "htmx-chrome-ext.js", "htmx.js"],
       "matches": ["<all_urls>"]
     }
   ],
