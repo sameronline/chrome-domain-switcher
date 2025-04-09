@@ -53,4 +53,12 @@ function showDebugUI(message = '') {
   }
   
   envSwitcherUI.showDebugUI(message);
+}
+
+// Run this after loading htmx
+if (typeof htmx === 'undefined') {
+  console.log('Reloading htmx');
+  const script = document.createElement('script');
+  script.src = chrome.runtime.getURL('htmx.min.js');
+  document.head.appendChild(script);
 } 
