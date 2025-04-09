@@ -191,6 +191,9 @@ document.addEventListener('DOMContentLoaded', function() {
       toggleFloatingButton.textContent = isEnabled ? 'Hide Floating UI' : 'Show Floating UI';
       toggleFloatingButton.style.background = isEnabled ? '#e74c3c' : '#4CAF50';
       toggleFloatingButton.disabled = false;
+    } else {
+      // No project found, disable the button
+      toggleFloatingButton.disabled = true;
     }
   }
   
