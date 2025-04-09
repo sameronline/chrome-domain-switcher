@@ -205,6 +205,7 @@ class HtmxEnvSwitcherUI {
   // Load settings from storage
   loadSettings() {
     try {
+      console.log('Loading settings from storage...');
       // Get settings from storage
       chrome.storage.sync.get({
         [EnvSwitcher.storage.keys.PROJECTS]: EnvSwitcher.storage.defaults.projects,
@@ -226,14 +227,46 @@ class HtmxEnvSwitcherUI {
         this.collapsed = result[EnvSwitcher.storage.keys.COLLAPSED_STATE];
         
         console.log('Settings loaded:', this.projects);
+        console.log('Current hostname:', this.currentHostname);
         
         // Find the current project for this domain
         this.findCurrentProject();
         
-        // Initialize the UI if a project is found
-        if (this.currentProject && this.currentProject.floatingEnabled) {
-          this.enabled = true;
-          this.initialize();
+        // Check if we found a project and if it's enabled
+        if (this.currentProject) {
+          console.log('Current project found:', this.currentProject.name, 'Floating enabled:', this.currentProject.floatingEnabled);
+          
+          // Initialize the UI if a project is found and floating is enabled
+          if (this.currentProject.floatingEnabled) {
+            console.log('Project has floating enabled, initializing UI');
+            this.enabled = true;
+            this.initialize();
+          } else {
+            console.log('Project found but floating UI is not enabled for it');
+          }
+        } else {
+          console.log('No project found for current hostname:', this.currentHostname);
+          
+          // Create a default project for testing if none exists
+          if (this.projects.length === 0 || confirm('No project found for this domain. Create a test project?')) {
+            console.log('Creating test project for current domain');
+            const testProject = {
+              name: "Test Project",
+              domains: [{ domain: this.currentHostname, label: "Current" }],
+              floatingEnabled: true
+            };
+            
+            this.projects.push(testProject);
+            this.currentProject = testProject;
+            this.currentProjectDomains = testProject.domains;
+            this.enabled = true;
+            
+            // Save the test project
+            EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.PROJECTS, this.projects, () => {
+              console.log('Test project saved, initializing UI');
+              this.initialize();
+            });
+          }
         }
       });
     } catch (e) {
@@ -681,25 +714,44 @@ class HtmxEnvSwitcherUI {
         const scriptUrl = chrome.runtime.getURL('htmx.min.js');
         console.log('Local htmx URL:', scriptUrl);
         
-        const script = document.createElement('script');
-        script.src = scriptUrl;
-        script.onload = () => {
-          console.log('htmx loaded successfully from local file');
-          
-          // Verify that htmx was properly loaded
-          if (window.htmx) {
-            console.log('HTMX is properly defined in window object');
-            resolve();
-          } else {
-            console.error('HTMX not defined in window object after loading!');
-            reject(new Error('HTMX failed to initialize'));
-          }
-        };
-        script.onerror = (err) => {
-          console.error('Failed to load htmx from local file:', err);
-          reject(err);
-        };
-        document.head.appendChild(script);
+        // First verify the file exists by trying to fetch it
+        fetch(scriptUrl)
+          .then(response => {
+            console.log('Fetch response for htmx.min.js:', response.status, response.ok);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch htmx.min.js: ${response.statusText}`);
+            }
+            
+            // Now create and inject the script
+            const script = document.createElement('script');
+            script.src = scriptUrl;
+            script.onload = () => {
+              console.log('htmx loaded successfully from local file');
+              
+              // Verify that htmx was properly loaded
+              if (window.htmx) {
+                console.log('HTMX is properly defined in window object');
+                
+                // Log htmx version to verify it's loaded correctly
+                console.log('HTMX version:', window.htmx.version);
+                
+                resolve();
+              } else {
+                console.error('HTMX not defined in window object after loading!');
+                reject(new Error('HTMX failed to initialize'));
+              }
+            };
+            script.onerror = (err) => {
+              console.error('Failed to load htmx script:', err);
+              reject(err);
+            };
+            document.head.appendChild(script);
+            console.log('Script element added to head, waiting for load event');
+          })
+          .catch(err => {
+            console.error('Error fetching htmx.min.js:', err);
+            reject(err);
+          });
       } catch (err) {
         console.error('Error setting up htmx:', err);
         reject(err);
@@ -968,73 +1020,72 @@ let envSwitcherUI;
 document.addEventListener('DOMContentLoaded', function() {
   console.log('DOMContentLoaded triggered - initializing Environment Switcher UI');
   
-  // Check if the floating-ui.html is accessible
-  try {
-    const resourceUrl = chrome.runtime.getURL('floating-ui.html');
-    console.log('Checking resource URL:', resourceUrl);
+  // Debug function to check all required resources
+  function checkAllResources() {
+    console.log('Checking all required resources...');
     
-    fetch(resourceUrl)
-      .then(response => {
-        console.log('Resource fetch response:', response.status, response.ok);
-        if (!response.ok) {
-          console.error('Failed to fetch floating-ui.html:', response.statusText);
-        }
-        return response.text();
-      })
-      .then(text => {
-        console.log('Resource content length:', text.length);
-        if (text.length > 0) {
-          console.log('Resource content sample:', text.substring(0, 100) + '...');
-        }
-      })
-      .catch(err => {
-        console.error('Error fetching resource:', err);
-      });
-  } catch (e) {
-    console.error('Error getting resource URL:', e);
+    const resources = ['htmx.min.js', 'htmx-chrome-ext.js', 'floating-ui.html'];
+    
+    resources.forEach(resource => {
+      try {
+        const url = chrome.runtime.getURL(resource);
+        console.log(`Getting resource URL for ${resource}:`, url);
+        
+        fetch(url)
+          .then(response => {
+            console.log(`Resource ${resource} fetch result:`, response.status, response.ok);
+            return response.text();
+          })
+          .then(text => {
+            console.log(`Resource ${resource} content length:`, text.length);
+          })
+          .catch(err => {
+            console.error(`Error fetching ${resource}:`, err);
+          });
+      } catch (e) {
+        console.error(`Error getting resource URL for ${resource}:`, e);
+      }
+    });
   }
   
+  // Check resources first
+  checkAllResources();
+  
   // Create the UI instance
+  console.log('Creating HtmxEnvSwitcherUI instance');
   envSwitcherUI = new HtmxEnvSwitcherUI();
 });
 
 // Listen for messages from popup or background script
-chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-  // Handle message to toggle floating UI
-  if (message.action === 'toggleFloatingUI') {
-    const projectName = message.projectName;
-    const enabled = message.enabled;
-    
-    console.log(`Toggling floating UI for project ${projectName}: ${enabled}`);
-    
-    if (enabled) {
-      if (!envSwitcherUI) {
-        envSwitcherUI = new HtmxEnvSwitcherUI();
-      }
-      
-      if (envSwitcherUI.container) {
-        envSwitcherUI.show();
-      } else {
-        envSwitcherUI.enableForProject(projectName);
-      }
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+  console.log('Received message in content script:', request);
+  
+  if (request.action === 'toggleFloatingUI') {
+    console.log('Toggle floating UI request received:', request.enabled);
+    if (request.enabled) {
+      showFloatingUI();
     } else {
-      if (envSwitcherUI && envSwitcherUI.container) {
-        envSwitcherUI.hide();
-      }
+      hideFloatingUI();
     }
-    
-    sendResponse({ success: true });
+    sendResponse({success: true});
+    return true;
+  }
+  
+  if (request.action === 'debugShowMinimalUI') {
+    console.log('Debug show minimal UI request received');
+    showDebugUI();
+    sendResponse({success: true});
     return true;
   }
   
   // Handle htmx requests
-  if (message.action === 'htmxResponse') {
+  if (request.action === 'htmxResponse') {
     // This is handled by the htmx-chrome-ext.js extension
     return true;
   }
   
   // Handle copy path
-  if (message.action === 'copyPath') {
+  if (request.action === 'copyPath') {
     const path = window.location.pathname + window.location.search + window.location.hash;
     navigator.clipboard.writeText(path).then(() => {
       if (envSwitcherUI && envSwitcherUI.container) {
@@ -1049,7 +1100,7 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
   }
   
   // Reset path button text
-  if (message.action === 'resetPathButton') {
+  if (request.action === 'resetPathButton') {
     if (envSwitcherUI && envSwitcherUI.container) {
       const copyPathButton = envSwitcherUI.container.querySelector('button[hx-post="chrome-ext:/copy-path"]');
       if (copyPathButton) {
@@ -1060,7 +1111,7 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
   }
   
   // Handle copy URL
-  if (message.action === 'copyUrl') {
+  if (request.action === 'copyUrl') {
     const url = window.location.href;
     navigator.clipboard.writeText(url).then(() => {
       if (envSwitcherUI && envSwitcherUI.container) {
@@ -1075,7 +1126,7 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
   }
   
   // Reset URL button text
-  if (message.action === 'resetUrlButton') {
+  if (request.action === 'resetUrlButton') {
     if (envSwitcherUI && envSwitcherUI.container) {
       const copyUrlButton = envSwitcherUI.container.querySelector('button[hx-post="chrome-ext:/copy-url"]');
       if (copyUrlButton) {
@@ -1084,4 +1135,189 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     }
     return true;
   }
-}); 
+  
+  // Return true to indicate that the response will be sent asynchronously
+  return true;
+});
+
+// Function to show a minimal debug UI
+function showDebugUI() {
+  console.log('Showing debug UI');
+  
+  // Remove any existing debug UI
+  const existingDebug = document.getElementById('chrome-env-switcher-debug');
+  if (existingDebug) {
+    existingDebug.remove();
+  }
+  
+  // Create a minimal UI element
+  const debugUI = document.createElement('div');
+  debugUI.id = 'chrome-env-switcher-debug';
+  debugUI.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 300px;
+    padding: 15px;
+    background-color: #ff5555;
+    color: white;
+    z-index: 9999999;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    font-family: Arial, sans-serif;
+  `;
+  
+  // Add content
+  debugUI.innerHTML = `
+    <h3 style="margin: 0 0 10px 0; font-size: 16px;">Environment Switcher Debug</h3>
+    <div style="margin-bottom: 10px;">
+      <p style="margin: 0; font-size: 14px;">If you can see this, DOM injection works!</p>
+      <p style="margin: 5px 0; font-size: 12px;">Current URL: ${window.location.href}</p>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+      <button id="chrome-env-switcher-debug-close" style="padding: 5px 10px; cursor: pointer;">Close</button>
+      <button id="chrome-env-switcher-debug-check" style="padding: 5px 10px; cursor: pointer;">Check Resources</button>
+    </div>
+  `;
+  
+  // Add to the document
+  document.body.appendChild(debugUI);
+  
+  // Add event listeners
+  document.getElementById('chrome-env-switcher-debug-close').addEventListener('click', () => {
+    debugUI.remove();
+  });
+  
+  document.getElementById('chrome-env-switcher-debug-check').addEventListener('click', () => {
+    checkAllResources();
+  });
+}
+
+// Function to check all required resources
+function checkAllResources() {
+  console.log('Checking all resources...');
+  
+  const resources = [
+    'htmx.min.js',
+    'htmx-chrome-ext.js',
+    'floating-ui.html'
+  ];
+  
+  const results = document.createElement('div');
+  results.style.cssText = `
+    margin-top: 10px;
+    padding: 10px;
+    background-color: rgba(0,0,0,0.2);
+    border-radius: 3px;
+    font-size: 12px;
+  `;
+  results.innerHTML = '<h4 style="margin: 0 0 5px 0;">Resource Check Results:</h4>';
+  
+  const debugUI = document.getElementById('chrome-env-switcher-debug');
+  if (debugUI) {
+    debugUI.appendChild(results);
+  }
+  
+  resources.forEach(resource => {
+    const resourceUrl = chrome.runtime.getURL(resource);
+    console.log(`Checking resource: ${resource} at ${resourceUrl}`);
+    
+    const resourceResult = document.createElement('div');
+    resourceResult.style.marginBottom = '5px';
+    resourceResult.innerHTML = `<strong>${resource}</strong>: Checking...`;
+    results.appendChild(resourceResult);
+    
+    fetch(resourceUrl)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Status: ${response.status}`);
+        }
+        return response.text();
+      })
+      .then(content => {
+        console.log(`Resource ${resource} loaded successfully, length: ${content.length}`);
+        resourceResult.innerHTML = `<strong>${resource}</strong>: ✅ OK (${content.length} bytes)`;
+        
+        // For htmx.min.js, add more validation
+        if (resource === 'htmx.min.js') {
+          if (content.includes('htmx') && content.length > 1000) {
+            resourceResult.innerHTML += ' <span style="color: #afa;">Valid htmx content</span>';
+          } else {
+            resourceResult.innerHTML += ' <span style="color: #faa;">Suspicious content</span>';
+          }
+        }
+      })
+      .catch(error => {
+        console.error(`Error fetching ${resource}:`, error);
+        resourceResult.innerHTML = `<strong>${resource}</strong>: ❌ Error: ${error.message}`;
+      });
+  });
+  
+  // Also check window.htmx status
+  const htmxStatus = document.createElement('div');
+  htmxStatus.style.marginTop = '10px';
+  htmxStatus.innerHTML = `<strong>window.htmx</strong>: ${window.htmx ? '✅ Available' : '❌ Not Available'}`;
+  results.appendChild(htmxStatus);
+}
+
+// Helper function to show the floating UI
+function showFloatingUI() {
+  console.log('Showing floating UI');
+  if (!envSwitcherUI) {
+    console.log('Creating new HtmxEnvSwitcherUI instance');
+    envSwitcherUI = new HtmxEnvSwitcherUI();
+  }
+  
+  if (envSwitcherUI.container) {
+    console.log('Container exists, showing UI');
+    envSwitcherUI.show();
+  } else {
+    console.log('No container, enabling for current project');
+    // Try to detect current project from URL
+    const hostname = window.location.hostname;
+    console.log('Current hostname:', hostname);
+    
+    chrome.storage.sync.get('projects', function(data) {
+      console.log('Retrieved projects from storage:', data.projects);
+      if (data.projects) {
+        const foundProject = Object.keys(data.projects).find(projectName => {
+          const domains = data.projects[projectName].domains || [];
+          return domains.some(domain => hostname.includes(domain));
+        });
+        
+        if (foundProject) {
+          console.log('Found matching project:', foundProject);
+          envSwitcherUI.enableForProject(foundProject);
+        } else {
+          console.log('No matching project found for hostname:', hostname);
+          // Show an error message in the debug UI
+          const debugUI = document.getElementById('chrome-env-switcher-debug');
+          if (!debugUI) {
+            showDebugUI();
+          }
+          
+          const errorMsg = document.createElement('div');
+          errorMsg.style.cssText = `
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #ffaaaa;
+            border-radius: 3px;
+            font-size: 12px;
+          `;
+          errorMsg.innerHTML = `<strong>Error:</strong> No matching project found for domain: ${hostname}`;
+          document.getElementById('chrome-env-switcher-debug').appendChild(errorMsg);
+        }
+      } else {
+        console.log('No projects configured');
+      }
+    });
+  }
+}
+
+// Helper function to hide the floating UI
+function hideFloatingUI() {
+  console.log('Hiding floating UI');
+  if (envSwitcherUI && envSwitcherUI.container) {
+    envSwitcherUI.hide();
+  }
+} 
