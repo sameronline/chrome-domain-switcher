@@ -257,6 +257,7 @@ class EnvSwitcherUI {
     const autoRedirectLabel = document.createElement('label');
     autoRedirectLabel.htmlFor = 'floating-auto-redirect';
     autoRedirectLabel.textContent = 'Auto';
+    autoRedirectLabel.className = 'env-switcher-floating__label';
     
     autoRedirectContainer.appendChild(autoRedirectCheckbox);
     autoRedirectContainer.appendChild(autoRedirectLabel);
@@ -278,6 +279,7 @@ class EnvSwitcherUI {
     const newWindowLabel = document.createElement('label');
     newWindowLabel.htmlFor = 'floating-new-window';
     newWindowLabel.textContent = 'New';
+    newWindowLabel.className = 'env-switcher-floating__label';
     
     newWindowContainer.appendChild(newWindowCheckbox);
     newWindowContainer.appendChild(newWindowLabel);
