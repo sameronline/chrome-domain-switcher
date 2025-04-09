@@ -1,5 +1,26 @@
 // Environment Detector - Content Script
 
+// Add helper function to check if a hostname matches a domain pattern (supporting wildcards)
+function matchesDomain(hostname, pattern) {
+  // If the pattern contains a wildcard
+  if (pattern.includes('*')) {
+    // Convert the wildcard pattern to a regular expression
+    // Escape special regex characters but keep * as wildcard
+    const regexPattern = pattern
+      .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape special chars
+      .replace(/\*/g, '.*'); // Replace * with .*
+    
+    // Create a regular expression from the pattern
+    const regex = new RegExp(`^${regexPattern}$`);
+    
+    // Test if the hostname matches the pattern
+    return regex.test(hostname);
+  }
+  
+  // No wildcard, do a direct comparison
+  return hostname === pattern;
+}
+
 // Class for the floating UI
 class EnvSwitcherUI {
   constructor() {
@@ -91,11 +112,24 @@ class EnvSwitcherUI {
   
   // Find which project the current domain belongs to
   findCurrentProject() {
-    this.currentProject = EnvSwitcher.project.findProjectForDomain(this.currentHostname, this.projects);
-    
-    if (this.currentProject) {
-      this.currentProjectDomains = this.currentProject.domains;
+    if (!this.projects || this.projects.length === 0) {
+      console.log('No projects defined');
+      return;
     }
+    
+    for (const project of this.projects) {
+      if (project.domains) {
+        for (const domainPattern of project.domains) {
+          if (matchesDomain(this.currentHostname, domainPattern)) {
+            this.currentProject = project;
+            this.currentProjectDomains = project.domains;
+            return;
+          }
+        }
+      }
+    }
+    
+    console.log('No project found for domain: ' + this.currentHostname);
   }
   
   // Build the UI elements

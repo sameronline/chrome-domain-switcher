@@ -7,6 +7,27 @@ document.addEventListener('DOMContentLoaded', function() {
   // Current project
   let currentProject = null;
   
+  // Helper function to check if a hostname matches a pattern (supporting wildcards)
+  function matchesDomain(hostname, pattern) {
+    // If the pattern contains a wildcard
+    if (pattern.includes('*')) {
+      // Convert the wildcard pattern to a regular expression
+      // Escape special regex characters but keep * as wildcard
+      const regexPattern = pattern
+        .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape special chars
+        .replace(/\*/g, '.*'); // Replace * with .*
+      
+      // Create a regular expression from the pattern
+      const regex = new RegExp(`^${regexPattern}$`);
+      
+      // Test if the hostname matches the pattern
+      return regex.test(hostname);
+    }
+    
+    // No wildcard, do a direct comparison
+    return hostname === pattern;
+  }
+  
   // Initialize the extension
   function init() {
     // Get current tab information
@@ -28,9 +49,15 @@ document.addEventListener('DOMContentLoaded', function() {
               // Find project for the current hostname
               currentProject = null;
               for (const project of projects) {
-                if (project.domains && project.domains.includes(currentHostname)) {
-                  currentProject = project;
-                  break;
+                if (project.domains) {
+                  // Check each domain pattern in the project
+                  for (const domainPattern of project.domains) {
+                    if (matchesDomain(currentHostname, domainPattern)) {
+                      currentProject = project;
+                      break;
+                    }
+                  }
+                  if (currentProject) break; // Exit the outer loop if project found
                 }
               }
               
