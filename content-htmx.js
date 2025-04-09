@@ -349,6 +349,67 @@ class HtmxEnvSwitcherUI {
     }
   }
   
+  // Enable floating UI for a specific project
+  enableForProject(projectName) {
+    // Find the project by name
+    const project = this.projects.find(p => p.name === projectName);
+    
+    if (project) {
+      // Update the project's enabled status in storage
+      project.floatingEnabled = true;
+      
+      // Update current project if it matches
+      if (this.currentProject && this.currentProject.name === projectName) {
+        this.currentProject.floatingEnabled = true;
+        this.enabled = true;
+        
+        // If UI already exists, show it
+        if (this.container) {
+          this.show();
+        } else {
+          // Otherwise initialize it
+          this.initialize();
+        }
+      }
+      
+      // Save the updated projects to storage
+      EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.PROJECTS, this.projects, () => {
+        console.log(`Floating UI enabled for project: ${projectName}`);
+      });
+    } else {
+      console.log(`Project not found: ${projectName}`);
+    }
+  }
+  
+  // Disable floating UI for a specific project
+  disableForProject(projectName) {
+    // Find the project by name
+    const project = this.projects.find(p => p.name === projectName);
+    
+    if (project) {
+      // Update the project's enabled status in storage
+      project.floatingEnabled = false;
+      
+      // Update current project if it matches
+      if (this.currentProject && this.currentProject.name === projectName) {
+        this.currentProject.floatingEnabled = false;
+        this.enabled = false;
+        
+        // If UI exists, hide it
+        if (this.container) {
+          this.hide();
+        }
+      }
+      
+      // Save the updated projects to storage
+      EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.PROJECTS, this.projects, () => {
+        console.log(`Floating UI disabled for project: ${projectName}`);
+      });
+    } else {
+      console.log(`Project not found: ${projectName}`);
+    }
+  }
+  
   // Destroy UI
   destroy() {
     if (this.container && this.container.parentElement) {
@@ -408,6 +469,58 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
   // Handle htmx requests
   if (message.action === 'htmxResponse') {
     // This is handled by the htmx-chrome-ext.js extension
+    return true;
+  }
+  
+  // Handle copy path
+  if (message.action === 'copyPath') {
+    const path = window.location.pathname + window.location.search + window.location.hash;
+    navigator.clipboard.writeText(path).then(() => {
+      if (envSwitcherUI && envSwitcherUI.container) {
+        const copyPathButton = envSwitcherUI.container.querySelector('button[hx-post="chrome-ext:/copy-path"]');
+        if (copyPathButton) {
+          copyPathButton.textContent = 'Copied!';
+        }
+      }
+      sendResponse({ success: true });
+    });
+    return true;
+  }
+  
+  // Reset path button text
+  if (message.action === 'resetPathButton') {
+    if (envSwitcherUI && envSwitcherUI.container) {
+      const copyPathButton = envSwitcherUI.container.querySelector('button[hx-post="chrome-ext:/copy-path"]');
+      if (copyPathButton) {
+        copyPathButton.textContent = 'Path';
+      }
+    }
+    return true;
+  }
+  
+  // Handle copy URL
+  if (message.action === 'copyUrl') {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url).then(() => {
+      if (envSwitcherUI && envSwitcherUI.container) {
+        const copyUrlButton = envSwitcherUI.container.querySelector('button[hx-post="chrome-ext:/copy-url"]');
+        if (copyUrlButton) {
+          copyUrlButton.textContent = 'Copied!';
+        }
+      }
+      sendResponse({ success: true });
+    });
+    return true;
+  }
+  
+  // Reset URL button text
+  if (message.action === 'resetUrlButton') {
+    if (envSwitcherUI && envSwitcherUI.container) {
+      const copyUrlButton = envSwitcherUI.container.querySelector('button[hx-post="chrome-ext:/copy-url"]');
+      if (copyUrlButton) {
+        copyUrlButton.textContent = 'URL';
+      }
+    }
     return true;
   }
 }); 
