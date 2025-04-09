@@ -33,6 +33,7 @@ class EnvSwitcherUI {
     this.collapsed = false;
     this.enabled = false;
     this.enforceProtocols = true;
+    this.incognitoMode = false;
     
     // Current URL info
     const urlInfo = EnvSwitcher.url.parseUrl(window.location.href);
@@ -64,33 +65,39 @@ class EnvSwitcherUI {
   
   // Load settings from storage
   loadSettings() {
-    EnvSwitcher.getSettings((items) => {
-      this.projects = items.projects;
-      this.protocolRules = items.protocolRules;
-      this.showProtocol = items.showProtocol;
-      this.autoCollapse = items.autoCollapse;
-      this.autoRedirect = items.autoRedirect;
-      this.newWindow = items.newWindow;
-      this.collapsed = items.collapsedState;
-      
-      // Find the current project
-      this.findCurrentProject();
-      
-      // Initialize if the current project has floating UI enabled
-      if (this.currentProject && this.currentProject.floatingEnabled) {
-        this.enabled = true;
-        this.initialize();
-      }
-      
-      // Debug information to help diagnose the issue
-      console.log('Environment Switcher:', {
-        currentHostname: this.currentHostname,
-        currentProject: this.currentProject ? this.currentProject.name : 'none',
-        enabled: this.enabled,
-        floatingEnabled: this.currentProject ? this.currentProject.floatingEnabled : undefined,
-        projects: this.projects.map(p => ({ name: p.name, domains: p.domains, enabled: p.floatingEnabled }))
+    try {
+      // Get settings from storage
+      chrome.storage.sync.get({
+        [EnvSwitcher.storage.keys.PROJECTS]: EnvSwitcher.storage.defaults.projects,
+        [EnvSwitcher.storage.keys.PROTOCOL_RULES]: EnvSwitcher.storage.defaults.protocolRules,
+        [EnvSwitcher.storage.keys.AUTO_REDIRECT]: EnvSwitcher.storage.defaults.autoRedirect,
+        [EnvSwitcher.storage.keys.NEW_WINDOW]: EnvSwitcher.storage.defaults.newWindow,
+        [EnvSwitcher.storage.keys.INCOGNITO_MODE]: EnvSwitcher.storage.defaults.incognitoMode,
+        [EnvSwitcher.storage.keys.SHOW_PROTOCOL]: EnvSwitcher.storage.defaults.showProtocol,
+        [EnvSwitcher.storage.keys.AUTO_COLLAPSE]: EnvSwitcher.storage.defaults.autoCollapse
+      }, (result) => {
+        this.projects = result[EnvSwitcher.storage.keys.PROJECTS];
+        this.protocolRules = result[EnvSwitcher.storage.keys.PROTOCOL_RULES];
+        this.autoRedirect = result[EnvSwitcher.storage.keys.AUTO_REDIRECT];
+        this.newWindow = result[EnvSwitcher.storage.keys.NEW_WINDOW];
+        this.incognitoMode = result[EnvSwitcher.storage.keys.INCOGNITO_MODE];
+        this.showProtocol = result[EnvSwitcher.storage.keys.SHOW_PROTOCOL];
+        this.autoCollapse = result[EnvSwitcher.storage.keys.AUTO_COLLAPSE];
+        
+        console.log('Settings loaded:', this.projects);
+        
+        // Find the current project for this domain
+        this.findCurrentProject();
+        
+        // Initialize the UI if a project is found
+        if (this.currentProject && this.currentProject.floatingEnabled) {
+          this.enabled = true;
+          this.initialize();
+        }
       });
-    });
+    } catch (e) {
+      console.error('Error loading settings:', e);
+    }
   }
   
   // Initialize the floating UI
@@ -346,6 +353,28 @@ class EnvSwitcherUI {
     newWindowContainer.appendChild(newWindowLabel);
     row3.appendChild(newWindowContainer);
     
+    // Incognito checkbox
+    const incognitoContainer = document.createElement('div');
+    incognitoContainer.className = 'env-switcher-floating__checkbox-container';
+    
+    const incognitoCheckbox = document.createElement('input');
+    incognitoCheckbox.type = 'checkbox';
+    incognitoCheckbox.id = 'floating-incognito';
+    incognitoCheckbox.checked = this.incognitoMode;
+    incognitoCheckbox.addEventListener('change', () => {
+      this.incognitoMode = incognitoCheckbox.checked;
+      EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.INCOGNITO_MODE, this.incognitoMode);
+    });
+    
+    const incognitoLabel = document.createElement('label');
+    incognitoLabel.htmlFor = 'floating-incognito';
+    incognitoLabel.textContent = 'Incog';
+    incognitoLabel.className = 'env-switcher-floating__label';
+    
+    incognitoContainer.appendChild(incognitoCheckbox);
+    incognitoContainer.appendChild(incognitoLabel);
+    row3.appendChild(incognitoContainer);
+    
     this.contentWrapper.appendChild(row3);
     
     // ROW 4: Copy path and Copy URL buttons
@@ -455,7 +484,15 @@ class EnvSwitcherUI {
     
     // Navigate to the URL
     if (this.newWindow) {
-      window.open(url, '_blank');
+      if (this.incognitoMode) {
+        // Create an incognito window (requires background script to handle)
+        chrome.runtime.sendMessage({
+          action: 'openIncognito',
+          url: url
+        });
+      } else {
+        window.open(url, '_blank');
+      }
     } else {
       window.location.href = url;
     }
@@ -628,7 +665,7 @@ class EnvSwitcherUI {
     EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.AUTO_COLLAPSE, this.autoCollapse);
     EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.AUTO_REDIRECT, this.autoRedirect);
     EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.NEW_WINDOW, this.newWindow);
-    EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.COLLAPSED_STATE, this.collapsed);
+    EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.INCOGNITO_MODE, this.incognitoMode);
   }
   
   toggleCollapse() {

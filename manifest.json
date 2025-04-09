@@ -7,7 +7,8 @@
     "storage",
     "tabs",
     "clipboardWrite",
-    "activeTab"
+    "activeTab",
+    "incognito"
   ],
   "host_permissions": [
     "<all_urls>"

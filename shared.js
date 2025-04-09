@@ -7,6 +7,7 @@ const Storage = {
     PROTOCOL_RULES: 'protocolRules',
     AUTO_REDIRECT: 'autoRedirect',
     NEW_WINDOW: 'newWindow',
+    INCOGNITO_MODE: 'incognitoMode',
     COLLAPSED_STATE: 'collapsedState',
     SHOW_PROTOCOL: 'showProtocol',
     AUTO_COLLAPSE: 'autoCollapse'
@@ -29,6 +30,7 @@ const Storage = {
     ],
     autoRedirect: true,
     newWindow: false,
+    incognitoMode: false,
     collapsedState: true,
     showProtocol: true,
     autoCollapse: true
@@ -41,6 +43,7 @@ const Storage = {
       [this.keys.PROTOCOL_RULES]: this.defaults.protocolRules,
       [this.keys.AUTO_REDIRECT]: this.defaults.autoRedirect,
       [this.keys.NEW_WINDOW]: this.defaults.newWindow,
+      [this.keys.INCOGNITO_MODE]: this.defaults.incognitoMode,
       [this.keys.COLLAPSED_STATE]: this.defaults.collapsedState,
       [this.keys.SHOW_PROTOCOL]: this.defaults.showProtocol,
       [this.keys.AUTO_COLLAPSE]: this.defaults.autoCollapse

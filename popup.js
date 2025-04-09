@@ -4,11 +4,44 @@ document.addEventListener('DOMContentLoaded', function() {
   const toggleFloatingButton = document.getElementById('toggle-floating');
   const configureButton = document.getElementById('configure-btn');
   
+  // Create and append the incognito mode checkbox
+  const incognitoContainer = document.createElement('div');
+  incognitoContainer.className = 'env-switcher__checkbox-container';
+  
+  const incognitoCheckbox = document.createElement('input');
+  incognitoCheckbox.type = 'checkbox';
+  incognitoCheckbox.id = 'incognito-mode';
+  
+  const incognitoLabel = document.createElement('label');
+  incognitoLabel.htmlFor = 'incognito-mode';
+  incognitoLabel.textContent = 'Open in incognito';
+  
+  incognitoContainer.appendChild(incognitoCheckbox);
+  incognitoContainer.appendChild(incognitoLabel);
+  
+  // Insert the checkbox before the configure button
+  configureButton.parentNode.insertBefore(incognitoContainer, configureButton);
+  
   // Current URL info
   let currentHostname;
   
   // Current project
   let currentProject = null;
+  
+  // Load incognito setting
+  function loadIncognitoSetting() {
+    chrome.storage.sync.get(
+      { [EnvSwitcher.storage.keys.INCOGNITO_MODE]: EnvSwitcher.storage.defaults.incognitoMode },
+      function(result) {
+        incognitoCheckbox.checked = result[EnvSwitcher.storage.keys.INCOGNITO_MODE];
+      }
+    );
+  }
+  
+  // Save incognito setting when checkbox changes
+  incognitoCheckbox.addEventListener('change', function() {
+    EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.INCOGNITO_MODE, incognitoCheckbox.checked);
+  });
   
   // Helper function to check if a hostname matches a pattern (supporting wildcards)
   function matchesDomain(hostname, pattern) {
@@ -171,6 +204,7 @@ document.addEventListener('DOMContentLoaded', function() {
           if (currentHostname) {
             // Now load settings and find the current project
             loadSettings();
+            loadIncognitoSetting();
           } else {
             projectNameElement.textContent = "Not available";
             toggleFloatingButton.disabled = true;
@@ -238,6 +272,6 @@ document.addEventListener('DOMContentLoaded', function() {
     chrome.runtime.openOptionsPage();
   });
   
-  // Initialize on load
+  // Initialize
   init();
 }); 

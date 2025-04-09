@@ -22,6 +22,7 @@ chrome.runtime.onInstalled.addListener(function(details) {
       autoCollapse: true,
       autoRedirect: true,
       newWindow: false,
+      incognitoMode: false,
       collapsedState: true
     }, function() {
       console.log('Default settings initialized');
@@ -46,6 +47,16 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     });
     
     // Return true to indicate we'll respond asynchronously
+    return true;
+  }
+  
+  // Handle opening a URL in an incognito window
+  if (message.action === 'openIncognito') {
+    // Create a new incognito window with the provided URL
+    chrome.windows.create({
+      url: message.url,
+      incognito: true
+    });
     return true;
   }
 });

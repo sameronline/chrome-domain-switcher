@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const protocolRulesTextarea = document.getElementById('protocol-rules');
   const showProtocolCheckbox = document.getElementById('show-protocol');
   const autoCollapseCheckbox = document.getElementById('auto-collapse');
+  const incognitoModeCheckbox = document.getElementById('incognito-mode');
   const saveButton = document.getElementById('save');
   const resetButton = document.getElementById('reset');
   
@@ -29,12 +30,14 @@ document.addEventListener('DOMContentLoaded', function() {
     detectors: {
     },
     showProtocol: true,
-    autoCollapse: true
+    autoCollapse: true,
+    incognitoMode: false
   };
   
   // Current settings
   let projects = [];
   let protocolRules = [];
+  let incognitoMode = false;
   
   // Load settings when page loads
   function loadSettings() {
@@ -43,10 +46,12 @@ document.addEventListener('DOMContentLoaded', function() {
       protocolRules: defaultSettings.protocolRules,
       detectors: defaultSettings.detectors,
       showProtocol: defaultSettings.showProtocol,
-      autoCollapse: defaultSettings.autoCollapse
+      autoCollapse: defaultSettings.autoCollapse,
+      incognitoMode: defaultSettings.incognitoMode
     }, function(items) {
       projects = items.projects;
       protocolRules = items.protocolRules;
+      incognitoMode = items.incognitoMode;
       
       // Update UI with loaded settings
       updateProjectsUI();
@@ -54,6 +59,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       showProtocolCheckbox.checked = items.showProtocol;
       autoCollapseCheckbox.checked = items.autoCollapse;
+      incognitoModeCheckbox.checked = items.incognitoMode;
     });
   }
   
@@ -411,41 +417,38 @@ document.addEventListener('DOMContentLoaded', function() {
     updateProjectsUI();
   }
   
-  // Save all settings
+  // Save settings to chrome.storage
   function saveSettings() {
-    // Parse protocol rules from textarea
-    const rawProtocolRules = protocolRulesTextarea.value.trim();
-    protocolRules = rawProtocolRules ? rawProtocolRules.split('\n').map(rule => rule.trim()) : [];
+    // Prepare protocol rules from textarea
+    const textareaValue = protocolRulesTextarea.value.trim();
+    const newProtocolRules = textareaValue === '' ? [] : 
+      textareaValue.split('\n').map(rule => rule.trim());
     
-    // Remove empty rules
-    protocolRules = protocolRules.filter(rule => rule);
+    // Get UI settings
+    const showProtocol = showProtocolCheckbox.checked;
+    const autoCollapse = autoCollapseCheckbox.checked;
+    const incognitoMode = incognitoModeCheckbox.checked;
     
-    // Validate protocol rules format
-    const invalidRules = protocolRules.filter(rule => {
-      const parts = rule.split('|');
-      return parts.length !== 2 || !['http', 'https'].includes(parts[1].trim());
-    });
-    
-    if (invalidRules.length > 0) {
-      alert('Some protocol rules are invalid. Please use the format pattern|protocol with http or https as the protocol.');
-      return;
-    }
-    
-    // Save settings to chrome.storage.sync
-    chrome.storage.sync.set({
+    // Prepare settings object
+    const settings = {
       projects: projects,
-      protocolRules: protocolRules,
-      detectors: {
-      },
-      showProtocol: showProtocolCheckbox.checked,
-      autoCollapse: autoCollapseCheckbox.checked
-    }, function() {
-      // Show saved message
-      const saveButton = document.getElementById('save');
-      const originalText = saveButton.textContent;
-      saveButton.textContent = 'Settings Saved!';
+      protocolRules: newProtocolRules,
+      showProtocol: showProtocol,
+      autoCollapse: autoCollapse,
+      incognitoMode: incognitoMode
+    };
+    
+    // Save settings
+    chrome.storage.sync.set(settings, function() {
+      // Show save confirmation
+      const saveConfirmation = document.createElement('div');
+      saveConfirmation.className = 'save-confirmation';
+      saveConfirmation.textContent = 'Settings saved!';
+      document.body.appendChild(saveConfirmation);
+      
+      // Remove confirmation after a delay
       setTimeout(function() {
-        saveButton.textContent = originalText;
+        document.body.removeChild(saveConfirmation);
       }, 2000);
     });
   }
@@ -461,6 +464,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       showProtocolCheckbox.checked = defaultSettings.showProtocol;
       autoCollapseCheckbox.checked = defaultSettings.autoCollapse;
+      incognitoModeCheckbox.checked = defaultSettings.incognitoMode;
     }
   }
   
