@@ -27,8 +27,52 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Initialize the extension
   function init() {
-    // Get current tab information and then load settings
-    getCurrentTabInfo();
+    // Get current tab information
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      if (tabs && tabs.length > 0) {
+        const tab = tabs[0];
+        
+        try {
+          // Parse the current URL
+          const urlInfo = new URL(tab.url);
+          const currentHostname = urlInfo.hostname;
+          
+          // If we have a valid hostname, look for the current project
+          if (currentHostname) {
+            // Load settings and find current project
+            chrome.storage.sync.get(null, function(items) {
+              console.log('Loaded settings:', items);
+              const projects = items.projects || [];
+              
+              // Find the project for the current domain
+              for (const project of projects) {
+                if (project.domains && project.domains.includes(currentHostname)) {
+                  currentProject = project;
+                  break;
+                }
+              }
+              
+              if (currentProject) {
+                // Update UI with current project
+                projectNameElement.textContent = currentProject.name;
+                updateToggleButton();
+              } else {
+                // No project found for this domain
+                projectNameElement.textContent = "None (Unknown Domain)";
+                toggleFloatingButton.disabled = true;
+              }
+            });
+          } else {
+            projectNameElement.textContent = "Not available";
+            toggleFloatingButton.disabled = true;
+          }
+        } catch (e) {
+          console.error('Error parsing URL:', e);
+          projectNameElement.textContent = "Error";
+          toggleFloatingButton.disabled = true;
+        }
+      }
+    });
   }
   
   function updateGoButtonVisibility() {
@@ -179,6 +223,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const isEnabled = currentProject.floatingEnabled === true;
       toggleFloatingButton.textContent = isEnabled ? 'Hide Floating UI' : 'Show Floating UI';
       toggleFloatingButton.style.background = isEnabled ? '#e74c3c' : '#4CAF50';
+      toggleFloatingButton.disabled = false;
     }
   }
   
@@ -315,9 +360,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Toggle floating UI state
     const newState = !currentProject.floatingEnabled;
     
-    // Update the current project in memory
-    currentProject.floatingEnabled = newState;
-    
     // Send message to content script
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
       if (tabs && tabs.length > 0) {
@@ -326,23 +368,20 @@ document.addEventListener('DOMContentLoaded', function() {
           enabled: newState,
           projectName: currentProject.name
         }, function(response) {
-          console.log('Toggle response:', response);
-          
           // Update the projects in storage
-          EnvSwitcher.getSettings(function(items) {
-            const projects = items.projects || [];
+          chrome.storage.sync.get('projects', function(data) {
+            const projects = data.projects || [];
             const projectIndex = projects.findIndex(p => p.name === currentProject.name);
             
             if (projectIndex !== -1) {
               projects[projectIndex].floatingEnabled = newState;
-              EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.PROJECTS, projects);
+              currentProject.floatingEnabled = newState;
+              
+              chrome.storage.sync.set({ projects: projects }, function() {
+                // Update UI
+                updateToggleButton();
+              });
             }
-            
-            // Update UI
-            updateToggleButton();
-            
-            // Close popup after toggle
-            setTimeout(() => window.close(), 300);
           });
         });
       }
