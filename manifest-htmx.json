@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "Environment Switcher (htmx)",
+  "version": "1.0",
+  "description": "Switch between different environments while preserving the current path",
+  "permissions": [
+    "storage",
+    "tabs",
+    "clipboardWrite",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "incognito": "spanning",
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icons/icon.svg"
+  },
+  "background": {
+    "service_worker": "background-htmx.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["shared.js", "content-htmx.js"],
+      "css": ["content.css", "floating-ui.css"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["floating-ui.html", "htmx-chrome-ext.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "options_page": "options.html",
+  "icons": {
+    "128": "icons/icon.svg"
+  }
+} 

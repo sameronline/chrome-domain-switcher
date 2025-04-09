@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Environment Switcher Floating UI</title>
+  <link rel="stylesheet" href="floating-ui.css">
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body>
+  <!-- This is only a template - it will be injected into the page -->
+  <div id="env-switcher-floating-template" style="display: none;">
+    <div class="env-switcher-floating" hx-ext="chrome-ext">
+      <button class="env-switcher-floating__toggle"
+              hx-post="chrome-ext:/toggle-collapse"
+              hx-swap="outerHTML"
+              hx-target="closest .env-switcher-floating">−</button>
+              
+      <div class="env-switcher-floating__content">
+        <!-- Row 1: Project select and protocol -->
+        <div class="env-switcher-floating__row">
+          <select class="env-switcher-floating__select" 
+                  id="project-select"
+                  hx-post="chrome-ext:/change-project"
+                  hx-target="#domain-select-container">
+            <!-- Project options will be filled dynamically -->
+          </select>
+          
+          <select class="env-switcher-floating__select"
+                  id="protocol-select"
+                  hx-post="chrome-ext:/update-protocol">
+            <option value="http">http</option>
+            <option value="https" selected>https</option>
+          </select>
+        </div>
+        
+        <!-- Row 2: Domain selection -->
+        <div class="env-switcher-floating__row" id="domain-select-container">
+          <select class="env-switcher-floating__select domain-select"
+                  id="domain-select"
+                  hx-post="chrome-ext:/update-domain"
+                  hx-trigger="change, load">
+            <!-- Domain options will be filled dynamically -->
+          </select>
+        </div>
+        
+        <!-- Row 3: Go button and checkboxes -->
+        <div class="env-switcher-floating__row">
+          <button class="env-switcher-floating__action-btn"
+                  id="go-button"
+                  hx-post="chrome-ext:/navigate"
+                  hx-include="#domain-select, #protocol-select">Go</button>
+          
+          <div class="env-switcher-floating__checkbox-container">
+            <input type="checkbox" id="auto-redirect" checked 
+                   hx-post="chrome-ext:/toggle-auto-redirect"
+                   hx-trigger="change">
+            <label for="auto-redirect" class="env-switcher-floating__label">Auto</label>
+          </div>
+          
+          <div class="env-switcher-floating__checkbox-container">
+            <input type="checkbox" id="new-window"
+                   hx-post="chrome-ext:/toggle-new-window"
+                   hx-trigger="change">
+            <label for="new-window" class="env-switcher-floating__label">New Window</label>
+          </div>
+          
+          <div class="env-switcher-floating__checkbox-container">
+            <input type="checkbox" id="incognito"
+                   hx-post="chrome-ext:/toggle-incognito"
+                   hx-trigger="change">
+            <label for="incognito" class="env-switcher-floating__label">Incognito</label>
+          </div>
+        </div>
+        
+        <!-- Row 4: Copy path and Copy URL buttons -->
+        <div class="env-switcher-floating__row">
+          <button class="env-switcher-floating__action-btn"
+                  hx-post="chrome-ext:/copy-path">Path</button>
+          
+          <button class="env-switcher-floating__action-btn"
+                  hx-post="chrome-ext:/copy-url">URL</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html> 
