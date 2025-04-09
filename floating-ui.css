@@ -153,4 +153,14 @@
   .env-switcher-floating__checkbox-container label {
     color: #eee;
   }
+  
+  .env-switcher-floating__select {
+    color: #eee;
+  }
+  
+  /* This ensures the dropdown options are readable in dark mode */
+  .env-switcher-floating__select option {
+    background-color: #333;
+    color: #eee;
+  }
 } 
