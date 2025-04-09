@@ -119,8 +119,10 @@ class EnvSwitcherUI {
     
     for (const project of this.projects) {
       if (project.domains) {
-        for (const domainPattern of project.domains) {
-          if (matchesDomain(this.currentHostname, domainPattern)) {
+        for (const domainEntry of project.domains) {
+          const domain = typeof domainEntry === 'string' ? domainEntry : domainEntry.domain;
+          
+          if (matchesDomain(this.currentHostname, domain)) {
             this.currentProject = project;
             this.currentProjectDomains = project.domains;
             return;
@@ -343,18 +345,28 @@ class EnvSwitcherUI {
     
     // Add domain options for current project
     if (this.currentProject) {
-      this.currentProject.domains.forEach(domain => {
+      this.currentProject.domains.forEach(domainEntry => {
         const option = document.createElement('option');
-        option.value = domain;
-        option.textContent = domain;
-        option.selected = domain === this.currentHostname;
+        
+        // Handle both string domains and domain objects with labels
+        if (typeof domainEntry === 'string') {
+          option.value = domainEntry;
+          option.textContent = domainEntry;
+          option.selected = domainEntry === this.currentHostname;
+        } else {
+          option.value = domainEntry.domain;
+          option.textContent = domainEntry.label || domainEntry.domain;
+          option.selected = domainEntry.domain === this.currentHostname;
+        }
+        
         this.domainSelect.appendChild(option);
       });
     }
 
     // Update protocols if necessary
     if (this.protocolSelect && this.enforceProtocols) {
-      const forcedProtocol = EnvSwitcher.protocol.getForcedProtocol(this.domainSelect.value, this.protocolRules);
+      const domainValue = this.domainSelect.value;
+      const forcedProtocol = EnvSwitcher.protocol.getForcedProtocol(domainValue, this.protocolRules);
       if (forcedProtocol) {
         this.protocolSelect.value = forcedProtocol.replace(':', '');
         this.protocolSelect.disabled = true;

@@ -28,6 +28,11 @@ document.addEventListener('DOMContentLoaded', function() {
     return hostname === pattern;
   }
   
+  // Get domain value from domain entry (which might be a string or object)
+  function getDomainValue(domainEntry) {
+    return typeof domainEntry === 'string' ? domainEntry : domainEntry.domain;
+  }
+  
   // Initialize the extension
   function init() {
     // Get current tab information
@@ -51,8 +56,9 @@ document.addEventListener('DOMContentLoaded', function() {
               for (const project of projects) {
                 if (project.domains) {
                   // Check each domain pattern in the project
-                  for (const domainPattern of project.domains) {
-                    if (matchesDomain(currentHostname, domainPattern)) {
+                  for (const domainEntry of project.domains) {
+                    const domain = getDomainValue(domainEntry);
+                    if (matchesDomain(currentHostname, domain)) {
                       currentProject = project;
                       break;
                     }

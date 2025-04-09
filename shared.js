@@ -15,7 +15,11 @@ const Storage = {
     projects: [
       {
         name: "Example Project",
-        domains: ["dev.example.com", "stage.example.com", "www.example.com"],
+        domains: [
+          { domain: "dev.example.com", label: "Development" },
+          { domain: "stage.example.com", label: "Staging" },
+          { domain: "www.example.com", label: "Production" }
+        ],
         floatingEnabled: false
       }
     ],
@@ -102,8 +106,28 @@ const ProjectTools = {
   // Find which project a domain belongs to
   findProjectForDomain: function(hostname, projects) {
     for (const project of projects) {
-      if (project.domains.includes(hostname)) {
-        return project;
+      if (project.domains) {
+        for (const domainEntry of project.domains) {
+          // Handle both string domains and domain objects
+          const domain = typeof domainEntry === 'string' ? domainEntry : domainEntry.domain;
+          
+          // Check if domain matches hostname (exact match)
+          if (hostname === domain) {
+            return project;
+          }
+          
+          // Check for wildcard matches
+          if (domain.includes('*')) {
+            const regexPattern = domain
+              .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape special chars
+              .replace(/\*/g, '.*'); // Replace * with .*
+            
+            const regex = new RegExp(`^${regexPattern}$`);
+            if (regex.test(hostname)) {
+              return project;
+            }
+          }
+        }
       }
     }
     return null;
