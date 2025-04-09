@@ -7,12 +7,12 @@
     "storage",
     "tabs",
     "clipboardWrite",
-    "activeTab",
-    "incognito"
+    "activeTab"
   ],
   "host_permissions": [
     "<all_urls>"
   ],
+  "incognito": "spanning",
   "action": {
     "default_popup": "popup.html",
     "default_icon": "icons/icon.svg"
