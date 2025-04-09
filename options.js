@@ -14,7 +14,11 @@ document.addEventListener('DOMContentLoaded', function() {
     projects: [
       {
         name: "Example Project",
-        domains: ["dev.example.com", "stage.example.com", "www.example.com"],
+        domains: [
+          { domain: "dev.example.com", label: "Development" },
+          { domain: "stage.example.com", label: "Staging" },
+          { domain: "www.example.com", label: "Production" }
+        ],
         floatingEnabled: false
       }
     ],
@@ -128,15 +132,45 @@ document.addEventListener('DOMContentLoaded', function() {
       const domainsDiv = document.createElement('div');
       domainsDiv.className = 'domain-list';
       
-      project.domains.forEach(function(domain, domainIndex) {
+      // Ensure domains array is properly formatted
+      if (!project.domains) {
+        project.domains = [];
+      }
+      
+      project.domains.forEach(function(domainEntry, domainIndex) {
         const domainItem = document.createElement('div');
         domainItem.className = 'domain-item';
         
+        // Handle both string domains and domain objects
+        const domainValue = typeof domainEntry === 'string' ? domainEntry : domainEntry.domain;
+        const labelValue = typeof domainEntry === 'string' ? '' : (domainEntry.label || '');
+        
         const domainText = document.createElement('span');
-        domainText.textContent = domain;
+        if (labelValue) {
+          domainText.innerHTML = `<strong>${labelValue}</strong> (${domainValue})`;
+        } else {
+          domainText.textContent = domainValue;
+        }
         domainItem.appendChild(domainText);
         
+        // Edit button
+        const editButton = document.createElement('button');
+        editButton.className = 'domain-edit-button';
+        editButton.textContent = 'Edit';
+        editButton.addEventListener('click', function() {
+          // Create a formatted domain object
+          const currentDomain = typeof domainEntry === 'string' 
+            ? { domain: domainEntry, label: '' }
+            : { ...domainEntry };
+          
+          // Edit domain dialog
+          editDomainDialog(projectIndex, domainIndex, currentDomain);
+        });
+        domainItem.appendChild(editButton);
+        
+        // Remove button
         const removeButton = document.createElement('button');
+        removeButton.className = 'remove-button';
         removeButton.textContent = 'Remove';
         removeButton.addEventListener('click', function() {
           projects[projectIndex].domains.splice(domainIndex, 1);
@@ -153,22 +187,35 @@ document.addEventListener('DOMContentLoaded', function() {
       
       const newDomainInput = document.createElement('input');
       newDomainInput.type = 'text';
-      newDomainInput.placeholder = 'Enter new domain';
+      newDomainInput.className = 'domain-input';
+      newDomainInput.placeholder = 'Enter domain (e.g., example.com)';
       addDomainForm.appendChild(newDomainInput);
       
+      const newLabelInput = document.createElement('input');
+      newLabelInput.type = 'text';
+      newLabelInput.className = 'label-input';
+      newLabelInput.placeholder = 'Label (optional)';
+      addDomainForm.appendChild(newLabelInput);
+      
       const addDomainButton = document.createElement('button');
-      addDomainButton.textContent = 'Add Domain';
+      addDomainButton.textContent = 'Add';
       addDomainButton.addEventListener('click', function() {
-        addDomainToProject(projectIndex, newDomainInput.value.trim());
+        const domain = newDomainInput.value.trim();
+        const label = newLabelInput.value.trim();
+        addDomainToProject(projectIndex, domain, label);
         newDomainInput.value = '';
+        newLabelInput.value = '';
       });
       addDomainForm.appendChild(addDomainButton);
       
       // Add keydown event for input
       newDomainInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') {
-          addDomainToProject(projectIndex, newDomainInput.value.trim());
+          const domain = newDomainInput.value.trim();
+          const label = newLabelInput.value.trim();
+          addDomainToProject(projectIndex, domain, label);
           newDomainInput.value = '';
+          newLabelInput.value = '';
         }
       });
       
@@ -185,6 +232,124 @@ document.addEventListener('DOMContentLoaded', function() {
       emptyMessage.textContent = 'No projects configured. Add a project below.';
       projectsContainer.appendChild(emptyMessage);
     }
+  }
+  
+  // Edit domain dialog
+  function editDomainDialog(projectIndex, domainIndex, domainObj) {
+    // Create a dialog for editing domain
+    const dialog = document.createElement('div');
+    dialog.className = 'dialog-overlay';
+    
+    const dialogContent = document.createElement('div');
+    dialogContent.className = 'dialog-content';
+    
+    const dialogTitle = document.createElement('h3');
+    dialogTitle.className = 'dialog-title';
+    dialogTitle.textContent = 'Edit Domain';
+    dialogContent.appendChild(dialogTitle);
+    
+    // Domain input
+    const domainGroup = document.createElement('div');
+    domainGroup.className = 'form-group';
+    
+    const domainLabel = document.createElement('label');
+    domainLabel.className = 'form-label';
+    domainLabel.textContent = 'Domain:';
+    domainGroup.appendChild(domainLabel);
+    
+    const domainInput = document.createElement('input');
+    domainInput.className = 'form-input';
+    domainInput.type = 'text';
+    domainInput.value = domainObj.domain;
+    domainGroup.appendChild(domainInput);
+    
+    dialogContent.appendChild(domainGroup);
+    
+    // Label input
+    const labelGroup = document.createElement('div');
+    labelGroup.className = 'form-group';
+    
+    const labelDomainLabel = document.createElement('label');
+    labelDomainLabel.className = 'form-label';
+    labelDomainLabel.textContent = 'Label (display name):';
+    labelGroup.appendChild(labelDomainLabel);
+    
+    const labelInput = document.createElement('input');
+    labelInput.className = 'form-input';
+    labelInput.type = 'text';
+    labelInput.value = domainObj.label || '';
+    labelGroup.appendChild(labelInput);
+    
+    dialogContent.appendChild(labelGroup);
+    
+    // Button container
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'button-container';
+    
+    // Cancel button
+    const cancelButton = document.createElement('button');
+    cancelButton.className = 'button button-cancel';
+    cancelButton.textContent = 'Cancel';
+    cancelButton.addEventListener('click', function() {
+      document.body.removeChild(dialog);
+    });
+    buttonContainer.appendChild(cancelButton);
+    
+    // Save button
+    const saveButton = document.createElement('button');
+    saveButton.className = 'button button-save';
+    saveButton.textContent = 'Save';
+    saveButton.addEventListener('click', function() {
+      const domain = domainInput.value.trim();
+      const label = labelInput.value.trim();
+      
+      if (!domain) {
+        alert('Domain cannot be empty');
+        return;
+      }
+      
+      // Check if domain exists elsewhere in this project
+      const exists = projects[projectIndex].domains.some((entry, idx) => {
+        const domainVal = typeof entry === 'string' ? entry : entry.domain;
+        return domainVal === domain && idx !== domainIndex;
+      });
+      
+      if (exists) {
+        alert('This domain already exists in the project');
+        return;
+      }
+      
+      // Update domain entry
+      projects[projectIndex].domains[domainIndex] = label 
+        ? { domain: domain, label: label }
+        : domain;
+      
+      // Sort domains
+      sortDomains(projectIndex);
+      
+      // Update UI
+      updateProjectsUI();
+      
+      // Close dialog
+      document.body.removeChild(dialog);
+    });
+    buttonContainer.appendChild(saveButton);
+    
+    dialogContent.appendChild(buttonContainer);
+    dialog.appendChild(dialogContent);
+    
+    document.body.appendChild(dialog);
+  }
+  
+  // Sort domains in a project
+  function sortDomains(projectIndex) {
+    if (!projects[projectIndex].domains) return;
+    
+    projects[projectIndex].domains.sort((a, b) => {
+      const domainA = typeof a === 'string' ? a : a.domain;
+      const domainB = typeof b === 'string' ? b : b.domain;
+      return domainA.localeCompare(domainB);
+    });
   }
   
   // Add a new project
@@ -211,7 +376,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // Add a domain to a project
-  function addDomainToProject(projectIndex, domain) {
+  function addDomainToProject(projectIndex, domain, label) {
     // Validate domain
     if (!domain) {
       alert('Please enter a domain');
@@ -222,16 +387,25 @@ document.addEventListener('DOMContentLoaded', function() {
     domain = domain.replace(/^https?:\/\//, '');
     
     // Validate domain isn't already in the project
-    if (projects[projectIndex].domains.includes(domain)) {
+    const exists = projects[projectIndex].domains.some(entry => {
+      const domainValue = typeof entry === 'string' ? entry : entry.domain;
+      return domainValue === domain;
+    });
+    
+    if (exists) {
       alert('This domain is already in the project');
       return;
     }
     
-    // Add domain to the project
-    projects[projectIndex].domains.push(domain);
+    // Add domain to the project, with label if provided
+    if (label) {
+      projects[projectIndex].domains.push({ domain: domain, label: label });
+    } else {
+      projects[projectIndex].domains.push(domain);
+    }
     
-    // Sort domains alphabetically
-    projects[projectIndex].domains.sort();
+    // Sort domains
+    sortDomains(projectIndex);
     
     // Update UI
     updateProjectsUI();
