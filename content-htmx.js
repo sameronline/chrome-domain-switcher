@@ -37,65 +37,7 @@ const EnvStorage = {
   }
 };
 
-const UrlTools = {
-  // Build URL with selected domain and protocol
-  buildUrl: function(domain, protocol, path, protocolRules) {
-    // Force protocol if needed
-    const forcedProtocol = ProtocolTools.getForcedProtocol(domain, protocolRules);
-    const finalProtocol = forcedProtocol || protocol;
-    
-    return `${finalProtocol}//${domain}${path}`;
-  },
-  
-  // Parse a URL into components
-  parseUrl: function(url) {
-    try {
-      const urlObj = new URL(url);
-      return {
-        protocol: urlObj.protocol,
-        hostname: urlObj.hostname,
-        path: urlObj.pathname + urlObj.search + urlObj.hash,
-        valid: true
-      };
-    } catch (e) {
-      console.error('Error parsing URL:', e);
-      return { valid: false };
-    }
-  }
-};
-
-const ProjectTools = {
-  // Find which project a domain belongs to
-  findProjectForDomain: function(hostname, projects) {
-    for (const project of projects) {
-      if (project.domains) {
-        for (const domainEntry of project.domains) {
-          // Handle both string domains and domain objects
-          const domain = typeof domainEntry === 'string' ? domainEntry : domainEntry.domain;
-          
-          // Check if domain matches hostname (exact match)
-          if (hostname === domain) {
-            return project;
-          }
-          
-          // Check for wildcard matches
-          if (domain.includes('*')) {
-            const regexPattern = domain
-              .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape special chars
-              .replace(/\*/g, '.*'); // Replace * with .*
-            
-            const regex = new RegExp(`^${regexPattern}$`);
-            if (regex.test(hostname)) {
-              return project;
-            }
-          }
-        }
-      }
-    }
-    return null;
-  }
-};
-
+// Protocol related tools
 const ProtocolTools = {
   // Check if domain has a forced protocol
   getForcedProtocol: function(domain, protocolRules) {
@@ -127,6 +69,67 @@ const ProtocolTools = {
       console.error('Invalid regex pattern:', regexPattern, e);
       return false;
     }
+  }
+};
+
+// URL related tools
+const UrlTools = {
+  // Build URL with selected domain and protocol
+  buildUrl: function(domain, protocol, path, protocolRules) {
+    // Force protocol if needed
+    const forcedProtocol = ProtocolTools.getForcedProtocol(domain, protocolRules);
+    const finalProtocol = forcedProtocol || protocol;
+    
+    return `${finalProtocol}//${domain}${path}`;
+  },
+  
+  // Parse a URL into components
+  parseUrl: function(url) {
+    try {
+      const urlObj = new URL(url);
+      return {
+        protocol: urlObj.protocol,
+        hostname: urlObj.hostname,
+        path: urlObj.pathname + urlObj.search + urlObj.hash,
+        valid: true
+      };
+    } catch (e) {
+      console.error('Error parsing URL:', e);
+      return { valid: false };
+    }
+  }
+};
+
+// Project related tools
+const ProjectTools = {
+  // Find which project a domain belongs to
+  findProjectForDomain: function(hostname, projects) {
+    for (const project of projects) {
+      if (project.domains) {
+        for (const domainEntry of project.domains) {
+          // Handle both string domains and domain objects
+          const domain = typeof domainEntry === 'string' ? domainEntry : domainEntry.domain;
+          
+          // Check if domain matches hostname (exact match)
+          if (hostname === domain) {
+            return project;
+          }
+          
+          // Check for wildcard matches
+          if (domain.includes('*')) {
+            const regexPattern = domain
+              .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape special chars
+              .replace(/\*/g, '.*'); // Replace * with .*
+            
+            const regex = new RegExp(`^${regexPattern}$`);
+            if (regex.test(hostname)) {
+              return project;
+            }
+          }
+        }
+      }
+    }
+    return null;
   }
 };
 
