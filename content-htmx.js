@@ -1,7 +1,7 @@
 // Environment Detector - Content Script (htmx version)
 
-// Import shared functionality
-const EnvStorage = {
+// Import shared functionality or define if not available
+const EnvStorage = window.EnvStorage || {
   keys: {
     PROJECTS: 'projects',
     PROTOCOL_RULES: 'protocolRules',
@@ -37,8 +37,9 @@ const EnvStorage = {
   }
 };
 
+// Use existing objects from shared.js if available, otherwise define our own
 // Protocol related tools
-const ProtocolTools = {
+window.ProtocolTools = window.ProtocolTools || {
   // Check if domain has a forced protocol
   getForcedProtocol: function(domain, protocolRules) {
     for (const rule of protocolRules) {
@@ -73,11 +74,11 @@ const ProtocolTools = {
 };
 
 // URL related tools
-const UrlTools = {
+window.UrlTools = window.UrlTools || {
   // Build URL with selected domain and protocol
   buildUrl: function(domain, protocol, path, protocolRules) {
     // Force protocol if needed
-    const forcedProtocol = ProtocolTools.getForcedProtocol(domain, protocolRules);
+    const forcedProtocol = window.ProtocolTools.getForcedProtocol(domain, protocolRules);
     const finalProtocol = forcedProtocol || protocol;
     
     return `${finalProtocol}//${domain}${path}`;
@@ -101,7 +102,7 @@ const UrlTools = {
 };
 
 // Project related tools
-const ProjectTools = {
+window.ProjectTools = window.ProjectTools || {
   // Find which project a domain belongs to
   findProjectForDomain: function(hostname, projects) {
     for (const project of projects) {
@@ -133,12 +134,12 @@ const ProjectTools = {
   }
 };
 
-// Initialize EnvSwitcher global object
-window.EnvSwitcher = {
+// Initialize EnvSwitcher global object if not already defined
+window.EnvSwitcher = window.EnvSwitcher || {
   storage: EnvStorage,
-  url: UrlTools,
-  project: ProjectTools,
-  protocol: ProtocolTools,
+  url: window.UrlTools || {},
+  project: window.ProjectTools || {},
+  protocol: window.ProtocolTools || {},
   saveSetting: function(key, value, callback) {
     const data = {};
     data[key] = value;
