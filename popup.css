@@ -90,4 +90,18 @@ body {
 
 .icon {
   margin-right: 6px;
+}
+
+.env-switcher__project-display {
+  width: 100%;
+  padding: 8px 10px;
+  background-color: #f8f8f8;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.env-switcher__project-display span {
+  font-weight: 600;
+  color: var(--primary-color);
 } 

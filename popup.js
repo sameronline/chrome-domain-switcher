@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const copyUrlButton = document.getElementById('copy-url');
   const configureButton = document.getElementById('configure-btn');
   const toggleFloatingButton = document.getElementById('toggle-floating');
+  const projectNameElement = document.getElementById('project-name');
   
   // Current URL info
   let currentUrl, currentProtocol, currentHostname, currentPath;
@@ -26,23 +27,8 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Initialize the extension
   function init() {
-    // Use shared settings loader
-    EnvSwitcher.getSettings(function(items) {
-      projects = items.projects;
-      protocolRules = items.protocolRules;
-      autoRedirect = items.autoRedirect;
-      newWindow = items.newWindow;
-      
-      // Update UI based on preferences
-      autoRedirectCheckbox.checked = autoRedirect;
-      newWindowCheckbox.checked = newWindow;
-      
-      // Check if Go button should be shown based on auto-redirect
-      updateGoButtonVisibility();
-      
-      // Get current tab information
-      getCurrentTabInfo();
-    });
+    // Get current tab information and then load settings
+    getCurrentTabInfo();
   }
   
   function updateGoButtonVisibility() {
@@ -78,14 +64,47 @@ document.addEventListener('DOMContentLoaded', function() {
             protocolSelect.disabled = false;
           }
           
-          // Find current project and populate dropdowns
-          findCurrentProject();
-          populateProjects();
+          // Now load settings
+          loadSettings();
         } else {
           // Handle non-HTTP URLs (e.g., chrome://, about:, etc.)
-          disableControls();
+          projectNameElement.textContent = "Not available";
+          toggleFloatingButton.disabled = true;
         }
       }
+    });
+  }
+  
+  // Load settings
+  function loadSettings() {
+    EnvSwitcher.getSettings(function(items) {
+      projects = items.projects || [];
+      protocolRules = items.protocolRules || [];
+      autoRedirect = items.autoRedirect || true;
+      newWindow = items.newWindow || false;
+      
+      // Update UI based on preferences
+      autoRedirectCheckbox.checked = autoRedirect;
+      newWindowCheckbox.checked = newWindow;
+      
+      // Check if Go button should be shown based on auto-redirect
+      updateGoButtonVisibility();
+      
+      // Find current project
+      currentProject = EnvSwitcher.project.findProjectForDomain(currentHostname, projects);
+      
+      if (currentProject) {
+        // Update UI with current project
+        projectNameElement.textContent = currentProject.name;
+        updateToggleButton();
+      } else {
+        // No project found for this domain
+        projectNameElement.textContent = "None (Unknown Domain)";
+        toggleFloatingButton.disabled = true;
+      }
+      
+      // Get current tab information
+      getCurrentTabInfo();
     });
   }
   
@@ -95,11 +114,6 @@ document.addEventListener('DOMContentLoaded', function() {
     protocolSelect.disabled = true;
     goButton.disabled = true;
     copyUrlButton.disabled = true;
-  }
-  
-  // Find which project the current domain belongs to
-  function findCurrentProject() {
-    currentProject = EnvSwitcher.project.findProjectForDomain(currentHostname, projects);
   }
   
   // Populate the project dropdown
@@ -163,8 +177,8 @@ document.addEventListener('DOMContentLoaded', function() {
   function updateToggleButton() {
     if (currentProject) {
       const isEnabled = currentProject.floatingEnabled === true;
-      toggleFloatingButton.textContent = isEnabled ? 'Disable Floating UI' : 'Enable Floating UI';
-      toggleFloatingButton.style.background = isEnabled ? '#e74c3c' : 'var(--secondary-color)';
+      toggleFloatingButton.textContent = isEnabled ? 'Hide Floating UI' : 'Show Floating UI';
+      toggleFloatingButton.style.background = isEnabled ? '#e74c3c' : '#4CAF50';
     }
   }
   
@@ -290,8 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   
   // Event: Configure button click
-  configureButton.addEventListener('click', function(e) {
-    e.preventDefault();
+  configureButton.addEventListener('click', function() {
     chrome.runtime.openOptionsPage();
   });
   
@@ -299,29 +312,43 @@ document.addEventListener('DOMContentLoaded', function() {
   toggleFloatingButton.addEventListener('click', function() {
     if (!currentProject) return;
     
-    // Toggle the current project's floating UI status
-    const newStatus = !currentProject.floatingEnabled;
+    // Toggle floating UI state
+    const newState = !currentProject.floatingEnabled;
     
-    // Update projects array with the new status
-    projects = EnvSwitcher.project.updateFloatingUIStatus(
-      currentProject.name,
-      projects,
-      newStatus,
-      function() {
-        console.log(`Floating UI ${newStatus ? 'enabled' : 'disabled'} for project: ${currentProject.name}`);
-      }
-    );
-    
-    // Update current project object
-    currentProject.floatingEnabled = newStatus;
-    
-    // Update UI
-    updateToggleButton();
+    // Update the current project in memory
+    currentProject.floatingEnabled = newState;
     
     // Send message to content script
-    EnvSwitcher.project.toggleFloatingUI(currentProject.name, newStatus);
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      if (tabs && tabs.length > 0) {
+        chrome.tabs.sendMessage(tabs[0].id, { 
+          action: 'toggleFloatingUI',
+          enabled: newState,
+          projectName: currentProject.name
+        }, function(response) {
+          console.log('Toggle response:', response);
+          
+          // Update the projects in storage
+          EnvSwitcher.getSettings(function(items) {
+            const projects = items.projects || [];
+            const projectIndex = projects.findIndex(p => p.name === currentProject.name);
+            
+            if (projectIndex !== -1) {
+              projects[projectIndex].floatingEnabled = newState;
+              EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.PROJECTS, projects);
+            }
+            
+            // Update UI
+            updateToggleButton();
+            
+            // Close popup after toggle
+            setTimeout(() => window.close(), 300);
+          });
+        });
+      }
+    });
   });
   
-  // Initialize the extension
+  // Initialize on load
   init();
 }); 
