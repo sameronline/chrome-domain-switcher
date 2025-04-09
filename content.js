@@ -117,14 +117,60 @@ class EnvSwitcherUI {
       return;
     }
     
+    // First, check for exact domain matches
     for (const project of this.projects) {
       if (project.domains) {
         for (const domainEntry of project.domains) {
           const domain = typeof domainEntry === 'string' ? domainEntry : domainEntry.domain;
           
-          if (matchesDomain(this.currentHostname, domain)) {
+          if (domain === this.currentHostname) {
             this.currentProject = project;
             this.currentProjectDomains = project.domains;
+            return;
+          }
+        }
+      }
+    }
+    
+    // If no exact match, check for wildcard matches
+    for (const project of this.projects) {
+      if (project.domains) {
+        for (const domainEntry of project.domains) {
+          const domain = typeof domainEntry === 'string' ? domainEntry : domainEntry.domain;
+          
+          // Skip non-wildcard domains since we already checked exact matches
+          if (!domain.includes('*')) {
+            continue;
+          }
+          
+          if (matchesDomain(this.currentHostname, domain)) {
+            // Found a wildcard match
+            this.currentProject = project;
+            this.currentProjectDomains = project.domains;
+            
+            // Add the current domain to the domains list with wildcard pattern as label
+            const wildcardPattern = domain;
+            const newDomainEntry = {
+              domain: this.currentHostname,
+              label: wildcardPattern
+            };
+            
+            // Check if domain is already in the list
+            const domainExists = project.domains.some(entry => {
+              const entryDomain = typeof entry === 'string' ? entry : entry.domain;
+              return entryDomain === this.currentHostname;
+            });
+            
+            if (!domainExists) {
+              // Add to the project domains list
+              project.domains.push(newDomainEntry);
+              
+              // Save the updated project to storage
+              EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.PROJECTS, this.projects, () => {
+                console.log(`Added domain ${this.currentHostname} to project ${project.name} with label ${wildcardPattern}`);
+              });
+            }
+            
             return;
           }
         }

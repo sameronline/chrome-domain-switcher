@@ -4,6 +4,9 @@ document.addEventListener('DOMContentLoaded', function() {
   const toggleFloatingButton = document.getElementById('toggle-floating');
   const configureButton = document.getElementById('configure-btn');
   
+  // Current URL info
+  let currentHostname;
+  
   // Current project
   let currentProject = null;
   
@@ -33,6 +36,109 @@ document.addEventListener('DOMContentLoaded', function() {
     return typeof domainEntry === 'string' ? domainEntry : domainEntry.domain;
   }
   
+  // Auto-add a domain to a project if it matches a wildcard pattern
+  function autoAddDomainIfMatchesWildcard(currentHostname, projects) {
+    // First check if the domain is already in any project
+    let exactMatch = false;
+    
+    for (const project of projects) {
+      if (project.domains) {
+        const hasExactMatch = project.domains.some(entry => {
+          const domainValue = getDomainValue(entry);
+          return domainValue === currentHostname;
+        });
+        
+        if (hasExactMatch) {
+          exactMatch = true;
+          break;
+        }
+      }
+    }
+    
+    // If we already have an exact match, no need to check for wildcard matches
+    if (exactMatch) {
+      return projects;
+    }
+    
+    // Check for wildcard matches
+    let projectsUpdated = false;
+    
+    for (const project of projects) {
+      if (project.domains) {
+        for (const domainEntry of project.domains) {
+          const domain = getDomainValue(domainEntry);
+          
+          // Skip non-wildcard domains
+          if (!domain.includes('*')) {
+            continue;
+          }
+          
+          if (matchesDomain(currentHostname, domain)) {
+            // Add the current domain to this project with the wildcard pattern as label
+            project.domains.push({
+              domain: currentHostname,
+              label: domain // Use the wildcard pattern as the label
+            });
+            
+            projectsUpdated = true;
+            break;
+          }
+        }
+        
+        if (projectsUpdated) {
+          break;
+        }
+      }
+    }
+    
+    // If we added a domain, save the updated projects list
+    if (projectsUpdated) {
+      chrome.storage.sync.set({ projects: projects }, function() {
+        console.log('Updated projects with auto-added domain:', currentHostname);
+      });
+    }
+    
+    return projects;
+  }
+  
+  // Load settings
+  function loadSettings() {
+    chrome.storage.sync.get('projects', function(data) {
+      let projects = data.projects || [];
+      
+      // Auto-add current domain if it matches a wildcard pattern
+      if (currentHostname) {
+        projects = autoAddDomainIfMatchesWildcard(currentHostname, projects);
+      }
+      
+      // Find current project
+      currentProject = null;
+      for (const project of projects) {
+        if (project.domains) {
+          // Check each domain pattern in the project
+          for (const domainEntry of project.domains) {
+            const domain = getDomainValue(domainEntry);
+            if (domain === currentHostname || matchesDomain(currentHostname, domain)) {
+              currentProject = project;
+              break;
+            }
+          }
+          if (currentProject) break; // Exit the outer loop if project found
+        }
+      }
+      
+      if (currentProject) {
+        // Update UI with current project
+        projectNameElement.textContent = currentProject.name;
+        updateToggleButton();
+      } else {
+        // No project found for this domain
+        projectNameElement.textContent = "None (Unknown Domain)";
+        toggleFloatingButton.disabled = true;
+      }
+    });
+  }
+  
   // Initialize the extension
   function init() {
     // Get current tab information
@@ -43,39 +149,11 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
           // Parse the current URL
           const urlObj = new URL(tab.url);
-          const currentHostname = urlObj.hostname;
+          currentHostname = urlObj.hostname;
           
           if (currentHostname) {
-            // Load projects from storage
-            chrome.storage.sync.get('projects', function(data) {
-              console.log('Loaded projects:', data.projects);
-              const projects = data.projects || [];
-              
-              // Find project for the current hostname
-              currentProject = null;
-              for (const project of projects) {
-                if (project.domains) {
-                  // Check each domain pattern in the project
-                  for (const domainEntry of project.domains) {
-                    const domain = getDomainValue(domainEntry);
-                    if (matchesDomain(currentHostname, domain)) {
-                      currentProject = project;
-                      break;
-                    }
-                  }
-                  if (currentProject) break; // Exit the outer loop if project found
-                }
-              }
-              
-              // Update UI based on current project
-              if (currentProject) {
-                projectNameElement.textContent = currentProject.name;
-                updateToggleButton();
-              } else {
-                projectNameElement.textContent = "Unknown Domain";
-                toggleFloatingButton.disabled = true;
-              }
-            });
+            // Now load settings and find the current project
+            loadSettings();
           } else {
             projectNameElement.textContent = "Not available";
             toggleFloatingButton.disabled = true;
@@ -89,7 +167,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // Update toggle button state
+  // Update the toggle button text based on current project's floating UI state
   function updateToggleButton() {
     if (currentProject) {
       const isEnabled = currentProject.floatingEnabled === true;
@@ -143,6 +221,6 @@ document.addEventListener('DOMContentLoaded', function() {
     chrome.runtime.openOptionsPage();
   });
   
-  // Start initialization
+  // Initialize on load
   init();
 }); 
