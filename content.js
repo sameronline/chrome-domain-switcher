@@ -226,35 +226,34 @@ class EnvSwitcherUI {
     this.toggleButton.title = this.collapsed ? 'Expand environment switcher' : 'Collapse environment switcher';
     this.toggleButton.addEventListener('click', () => this.toggleCollapse());
     
-    // ROW 1: Project and Protocol selection
+    // ROW 1: Project dropdown and protocol select
     const row1 = document.createElement('div');
     row1.className = 'env-switcher-floating__row';
     
-    // Create project select if we have projects
-    if (this.projects.length > 0) {
-      this.projectSelect = document.createElement('select');
-      this.projectSelect.className = 'env-switcher-floating__select';
-      this.projectSelect.title = 'Select Project';
-      
-      // Add all projects to select
-      this.projects.forEach(project => {
-        const option = document.createElement('option');
-        option.value = project.name;
-        option.textContent = project.name;
-        option.selected = this.currentProject && project.name === this.currentProject.name;
-        this.projectSelect.appendChild(option);
-      });
-      
-      this.projectSelect.addEventListener('change', () => {
-        const selectedProject = this.projects.find(p => p.name === this.projectSelect.value);
-        if (selectedProject) {
-          this.currentProject = selectedProject;
-          this.updateDomainOptions();
-        }
-      });
-      
-      row1.appendChild(this.projectSelect);
-    }
+    // Create project dropdown
+    this.projectSelect = document.createElement('select');
+    this.projectSelect.className = 'env-switcher-floating__select';
+    this.projectSelect.title = 'Select Project';
+    this.projectSelect.disabled = true; // Disable the project select for visual confirmation only
+    
+    // Add options for each project
+    this.projects.forEach(project => {
+      const option = document.createElement('option');
+      option.value = project.name;
+      option.text = project.name;
+      option.selected = this.currentProject && project.name === this.currentProject.name;
+      this.projectSelect.appendChild(option);
+    });
+    
+    this.projectSelect.addEventListener('change', () => {
+      const selectedProject = this.projects.find(p => p.name === this.projectSelect.value);
+      if (selectedProject) {
+        this.currentProject = selectedProject;
+        this.updateDomainOptions();
+      }
+    });
+    
+    row1.appendChild(this.projectSelect);
     
     // Create protocol select if enabled
     if (this.showProtocol) {
