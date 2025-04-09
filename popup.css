@@ -61,6 +61,23 @@ body {
   background: #45a049;
 }
 
+.env-switcher__toggle-btn--hide {
+  background: #e74c3c;
+}
+
+.env-switcher__toggle-btn--hide:hover {
+  background: #c0392b;
+}
+
+.env-switcher__toggle-btn--disabled {
+  background: #999999;
+  cursor: not-allowed;
+}
+
+.env-switcher__toggle-btn--disabled:hover {
+  background: #999999;
+}
+
 .env-switcher__footer {
   margin-top: 12px;
   text-align: center;

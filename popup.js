@@ -118,6 +118,28 @@ document.addEventListener('DOMContentLoaded', function() {
     return projects;
   }
   
+  // Update the toggle button text based on current project's floating UI state
+  function updateToggleButton() {
+    // Remove all state classes first
+    toggleFloatingButton.classList.remove('env-switcher__toggle-btn--hide', 'env-switcher__toggle-btn--disabled');
+    
+    if (currentProject) {
+      const isEnabled = currentProject.floatingEnabled === true;
+      toggleFloatingButton.textContent = isEnabled ? 'Hide Floating UI' : 'Show Floating UI';
+      
+      if (isEnabled) {
+        toggleFloatingButton.classList.add('env-switcher__toggle-btn--hide');
+      }
+      
+      toggleFloatingButton.disabled = false;
+    } else {
+      // No project found, disable the button
+      toggleFloatingButton.textContent = 'Show Floating UI';
+      toggleFloatingButton.classList.add('env-switcher__toggle-btn--disabled');
+      toggleFloatingButton.disabled = true;
+    }
+  }
+  
   // Load settings
   function loadSettings() {
     chrome.storage.sync.get('projects', function(data) {
@@ -151,6 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
       } else {
         // No project found for this domain
         projectNameElement.textContent = "None (Unknown Domain)";
+        toggleFloatingButton.classList.add('env-switcher__toggle-btn--disabled');
         toggleFloatingButton.disabled = true;
       }
     });
@@ -173,28 +196,17 @@ document.addEventListener('DOMContentLoaded', function() {
             loadSettings();
           } else {
             projectNameElement.textContent = "Not available";
+            toggleFloatingButton.classList.add('env-switcher__toggle-btn--disabled');
             toggleFloatingButton.disabled = true;
           }
         } catch (e) {
           console.error("Error parsing URL:", e);
           projectNameElement.textContent = "Error";
+          toggleFloatingButton.classList.add('env-switcher__toggle-btn--disabled');
           toggleFloatingButton.disabled = true;
         }
       }
     });
-  }
-  
-  // Update the toggle button text based on current project's floating UI state
-  function updateToggleButton() {
-    if (currentProject) {
-      const isEnabled = currentProject.floatingEnabled === true;
-      toggleFloatingButton.textContent = isEnabled ? 'Hide Floating UI' : 'Show Floating UI';
-      toggleFloatingButton.style.background = isEnabled ? '#e74c3c' : '#4CAF50';
-      toggleFloatingButton.disabled = false;
-    } else {
-      // No project found, disable the button
-      toggleFloatingButton.disabled = true;
-    }
   }
   
   // Toggle floating UI button click handler
