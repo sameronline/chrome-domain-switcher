@@ -346,7 +346,7 @@ class EnvSwitcherUI {
     
     const newWindowLabel = document.createElement('label');
     newWindowLabel.htmlFor = 'floating-new-window';
-    newWindowLabel.textContent = 'New';
+    newWindowLabel.textContent = 'New Window';
     newWindowLabel.className = 'env-switcher-floating__label';
     
     newWindowContainer.appendChild(newWindowCheckbox);
@@ -368,7 +368,7 @@ class EnvSwitcherUI {
     
     const incognitoLabel = document.createElement('label');
     incognitoLabel.htmlFor = 'floating-incognito';
-    incognitoLabel.textContent = 'Incog';
+    incognitoLabel.textContent = 'Incognito';
     incognitoLabel.className = 'env-switcher-floating__label';
     
     incognitoContainer.appendChild(incognitoCheckbox);
