@@ -74,7 +74,8 @@ class EnvSwitcherUI {
         [EnvSwitcher.storage.keys.NEW_WINDOW]: EnvSwitcher.storage.defaults.newWindow,
         [EnvSwitcher.storage.keys.INCOGNITO_MODE]: EnvSwitcher.storage.defaults.incognitoMode,
         [EnvSwitcher.storage.keys.SHOW_PROTOCOL]: EnvSwitcher.storage.defaults.showProtocol,
-        [EnvSwitcher.storage.keys.AUTO_COLLAPSE]: EnvSwitcher.storage.defaults.autoCollapse
+        [EnvSwitcher.storage.keys.AUTO_COLLAPSE]: EnvSwitcher.storage.defaults.autoCollapse,
+        [EnvSwitcher.storage.keys.COLLAPSED_STATE]: EnvSwitcher.storage.defaults.collapsedState
       }, (result) => {
         this.projects = result[EnvSwitcher.storage.keys.PROJECTS];
         this.protocolRules = result[EnvSwitcher.storage.keys.PROTOCOL_RULES];
@@ -83,6 +84,7 @@ class EnvSwitcherUI {
         this.incognitoMode = result[EnvSwitcher.storage.keys.INCOGNITO_MODE];
         this.showProtocol = result[EnvSwitcher.storage.keys.SHOW_PROTOCOL];
         this.autoCollapse = result[EnvSwitcher.storage.keys.AUTO_COLLAPSE];
+        this.collapsed = result[EnvSwitcher.storage.keys.COLLAPSED_STATE];
         
         console.log('Settings loaded:', this.projects);
         
@@ -665,6 +667,7 @@ class EnvSwitcherUI {
     EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.AUTO_REDIRECT, this.autoRedirect);
     EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.NEW_WINDOW, this.newWindow);
     EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.INCOGNITO_MODE, this.incognitoMode);
+    EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.COLLAPSED_STATE, this.collapsed);
   }
   
   toggleCollapse() {
@@ -673,8 +676,8 @@ class EnvSwitcherUI {
     this.toggleButton.innerHTML = this.collapsed ? '⊕' : '⊖';
     this.toggleButton.title = this.collapsed ? 'Expand environment switcher' : 'Collapse environment switcher';
     
-    // Save collapsed state
-    EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.COLLAPSED, this.collapsed);
+    // Save collapsed state with the correct key
+    EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.COLLAPSED_STATE, this.collapsed);
   }
   
   // Build target URL for links or copying
