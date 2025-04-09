@@ -103,9 +103,6 @@ class EnvSwitcherUI {
       return;
     }
     
-    // Attach event handlers
-    this.addEventListeners();
-    
     // Add to the DOM
     this.appendToDOM();
   }
