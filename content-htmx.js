@@ -329,7 +329,7 @@ class HtmxEnvSwitcherUI {
   initialize() {
     console.log('Initializing htmx UI...');
     
-    // First load htmx
+    // First load htmx - this is always required
     this.loadHtmxIfNeeded()
       .then(() => {
         console.log('HTMX library loaded successfully, proceeding with template loading');
@@ -345,25 +345,41 @@ class HtmxEnvSwitcherUI {
               throw new Error(`Failed to fetch template: ${response.statusText}`);
             }
             return response.text();
+          })
+          .catch(error => {
+            // Template fetch failed, but htmx loaded - use fallback template
+            console.error('Error fetching template:', error);
+            console.log('Using pre-built template with htmx attributes');
+            // Return the fallback template
+            return this.getFallbackTemplate();
           });
       })
       .then(html => {
+        if (!html) {
+          throw new Error('No HTML template available');
+        }
         console.log('Template HTML loaded, length:', html.length);
         // Process the template once htmx is loaded
         this.processTemplate(html);
       })
       .catch(error => {
-        console.error('Error during initialization:', error);
-        console.log('Using fallback template');
-        // Use fallback template as a last resort
-        const fallbackTemplate = this.getFallbackTemplate();
-        this.processTemplate(fallbackTemplate);
+        console.error('Fatal initialization error:', error);
+        // If htmx failed to load, we don't show the UI at all
+        console.error('Cannot proceed without htmx, UI will not be shown');
       });
   }
   
   // Process the HTML template
   processTemplate(html) {
     console.log('Processing HTML template...');
+    
+    // Only process if htmx is loaded
+    if (!window.htmx) {
+      console.error('HTMX not loaded, cannot proceed with UI setup');
+      return;
+    }
+    
+    console.log('HTMX is loaded, creating UI');
     
     // Create a temporary div to hold the template
     const tempDiv = document.createElement('div');
@@ -394,15 +410,11 @@ class HtmxEnvSwitcherUI {
     
     console.log('Container element found, setting up UI');
     
-    // Ensure htmx is initialized before we use any of its features
-    if (!window.htmx) {
-      console.error('HTMX not loaded yet but we need to proceed with UI setup');
-      // We'll still show the UI but without htmx functionality
-    } else {
-      console.log('HTMX is available, setting up htmx extension');
-      // Make sure the extension is loaded
-      this.loadChromeExtension();
-    }
+    // Add htmx attributes to elements
+    this.setupHtmxAttributes(this.container);
+    
+    // Make sure the extension is loaded
+    this.loadChromeExtension();
     
     // Set collapsed state if needed
     if (this.collapsed) {
@@ -468,12 +480,118 @@ class HtmxEnvSwitcherUI {
     console.log('UI added to DOM');
   }
   
-  // Get fallback template in case the HTML file can't be loaded
+  // Setup htmx attributes for the UI
+  setupHtmxAttributes(container) {
+    console.log('Setting up htmx attributes');
+    
+    // Add htmx extension to container
+    container.setAttribute('hx-ext', 'chrome-ext');
+    
+    // Toggle button
+    const toggleBtn = container.querySelector('#floating-toggle-btn');
+    if (toggleBtn) {
+      toggleBtn.setAttribute('hx-post', 'chrome-ext:/toggle-collapse');
+      toggleBtn.setAttribute('hx-swap', 'outerHTML');
+      toggleBtn.setAttribute('hx-target', 'closest .env-switcher-floating');
+    }
+    
+    // Project select
+    const projectSelect = container.querySelector('#project-select');
+    if (projectSelect) {
+      projectSelect.setAttribute('hx-post', 'chrome-ext:/change-project');
+      projectSelect.setAttribute('hx-target', '#domain-select-container');
+    }
+    
+    // Protocol select
+    const protocolSelect = container.querySelector('#protocol-select');
+    if (protocolSelect) {
+      protocolSelect.setAttribute('hx-post', 'chrome-ext:/update-protocol');
+    }
+    
+    // Domain select
+    const domainSelect = container.querySelector('#domain-select');
+    if (domainSelect) {
+      domainSelect.setAttribute('hx-post', 'chrome-ext:/update-domain');
+      domainSelect.setAttribute('hx-trigger', 'change, load');
+    }
+    
+    // Go button
+    const goButton = container.querySelector('#go-button');
+    if (goButton) {
+      goButton.setAttribute('hx-post', 'chrome-ext:/navigate');
+      goButton.setAttribute('hx-include', '#domain-select, #protocol-select');
+    }
+    
+    // Auto redirect checkbox
+    const autoRedirectCheckbox = container.querySelector('#auto-redirect');
+    if (autoRedirectCheckbox) {
+      autoRedirectCheckbox.setAttribute('hx-post', 'chrome-ext:/toggle-auto-redirect');
+      autoRedirectCheckbox.setAttribute('hx-trigger', 'change');
+    }
+    
+    // New window checkbox
+    const newWindowCheckbox = container.querySelector('#new-window');
+    if (newWindowCheckbox) {
+      newWindowCheckbox.setAttribute('hx-post', 'chrome-ext:/toggle-new-window');
+      newWindowCheckbox.setAttribute('hx-trigger', 'change');
+    }
+    
+    // Incognito checkbox
+    const incognitoCheckbox = container.querySelector('#incognito');
+    if (incognitoCheckbox) {
+      incognitoCheckbox.setAttribute('hx-post', 'chrome-ext:/toggle-incognito');
+      incognitoCheckbox.setAttribute('hx-trigger', 'change');
+    }
+    
+    // Copy path button
+    const copyPathBtn = container.querySelector('#copy-path-btn');
+    if (copyPathBtn) {
+      copyPathBtn.setAttribute('hx-post', 'chrome-ext:/copy-path');
+    }
+    
+    // Copy URL button
+    const copyUrlBtn = container.querySelector('#copy-url-btn');
+    if (copyUrlBtn) {
+      copyUrlBtn.setAttribute('hx-post', 'chrome-ext:/copy-url');
+    }
+  }
+  
+  // Navigate to the selected environment
+  navigateToSelectedEnvironment(domain, protocol) {
+    if (!domain) return;
+    
+    // Make sure protocol is properly formatted (with or without colon)
+    protocol = protocol || 'https';
+    const protocolWithFormat = protocol.endsWith(':') ? protocol : protocol + ':';
+    const path = window.location.pathname + window.location.search + window.location.hash;
+    
+    // Build the URL
+    const url = `${protocolWithFormat}//${domain}${path}`;
+    
+    console.log('Navigating to URL:', url);
+    
+    // Navigate to the URL
+    if (this.newWindow) {
+      if (this.incognitoMode) {
+        // Create an incognito window (requires background script to handle)
+        chrome.runtime.sendMessage({
+          action: 'openIncognito',
+          url: url
+        });
+      } else {
+        window.open(url, '_blank');
+      }
+    } else {
+      window.location.href = url;
+    }
+  }
+  
+  // Get preformatted template if needed (already with htmx attributes)
   getFallbackTemplate() {
     return `
     <div id="env-switcher-floating-template" style="display: none;">
       <div class="env-switcher-floating" hx-ext="chrome-ext">
-        <button class="env-switcher-floating__toggle"
+        <button class="env-switcher-floating__toggle" id="floating-toggle-btn"
                 hx-post="chrome-ext:/toggle-collapse"
                 hx-swap="outerHTML"
                 hx-target="closest .env-switcher-floating">−</button>
@@ -536,9 +654,11 @@ class HtmxEnvSwitcherUI {
           <!-- Row 4: Copy path and Copy URL buttons -->
           <div class="env-switcher-floating__row">
             <button class="env-switcher-floating__action-btn"
+                    id="copy-path-btn"
                     hx-post="chrome-ext:/copy-path">Path</button>
             
             <button class="env-switcher-floating__action-btn"
+                    id="copy-url-btn"
                     hx-post="chrome-ext:/copy-url">URL</button>
           </div>
         </div>
@@ -551,20 +671,29 @@ class HtmxEnvSwitcherUI {
   loadHtmxIfNeeded() {
     return new Promise((resolve, reject) => {
       if (window.htmx) {
+        console.log('HTMX already loaded, reusing it');
         resolve();
         return;
       }
       
       try {
-        console.log('Loading htmx from local file...');
-        const scriptUrl = chrome.runtime.getURL('htmx.js');
+        console.log('Loading htmx from local minified file...');
+        const scriptUrl = chrome.runtime.getURL('htmx.min.js');
         console.log('Local htmx URL:', scriptUrl);
         
         const script = document.createElement('script');
         script.src = scriptUrl;
         script.onload = () => {
           console.log('htmx loaded successfully from local file');
-          resolve();
+          
+          // Verify that htmx was properly loaded
+          if (window.htmx) {
+            console.log('HTMX is properly defined in window object');
+            resolve();
+          } else {
+            console.error('HTMX not defined in window object after loading!');
+            reject(new Error('HTMX failed to initialize'));
+          }
         };
         script.onerror = (err) => {
           console.error('Failed to load htmx from local file:', err);
