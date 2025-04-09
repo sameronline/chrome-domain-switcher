@@ -1,5 +1,150 @@
 // Environment Detector - Content Script (htmx version)
 
+// Import shared functionality
+const Storage = {
+  keys: {
+    PROJECTS: 'projects',
+    PROTOCOL_RULES: 'protocolRules',
+    AUTO_REDIRECT: 'autoRedirect',
+    NEW_WINDOW: 'newWindow',
+    INCOGNITO_MODE: 'incognitoMode',
+    COLLAPSED_STATE: 'collapsedState',
+    SHOW_PROTOCOL: 'showProtocol',
+    AUTO_COLLAPSE: 'autoCollapse'
+  },
+  defaults: {
+    projects: [
+      {
+        name: "Example Project",
+        domains: [
+          { domain: "dev.example.com", label: "Development" },
+          { domain: "stage.example.com", label: "Staging" },
+          { domain: "www.example.com", label: "Production" }
+        ],
+        floatingEnabled: false
+      }
+    ],
+    protocolRules: [
+      '*.dev.example.com|https',
+      '*.stage.example.com|https'
+    ],
+    autoRedirect: true,
+    newWindow: false,
+    incognitoMode: false,
+    collapsedState: true,
+    showProtocol: true,
+    autoCollapse: true
+  }
+};
+
+const UrlTools = {
+  // Build URL with selected domain and protocol
+  buildUrl: function(domain, protocol, path, protocolRules) {
+    // Force protocol if needed
+    const forcedProtocol = ProtocolTools.getForcedProtocol(domain, protocolRules);
+    const finalProtocol = forcedProtocol || protocol;
+    
+    return `${finalProtocol}//${domain}${path}`;
+  },
+  
+  // Parse a URL into components
+  parseUrl: function(url) {
+    try {
+      const urlObj = new URL(url);
+      return {
+        protocol: urlObj.protocol,
+        hostname: urlObj.hostname,
+        path: urlObj.pathname + urlObj.search + urlObj.hash,
+        valid: true
+      };
+    } catch (e) {
+      console.error('Error parsing URL:', e);
+      return { valid: false };
+    }
+  }
+};
+
+const ProjectTools = {
+  // Find which project a domain belongs to
+  findProjectForDomain: function(hostname, projects) {
+    for (const project of projects) {
+      if (project.domains) {
+        for (const domainEntry of project.domains) {
+          // Handle both string domains and domain objects
+          const domain = typeof domainEntry === 'string' ? domainEntry : domainEntry.domain;
+          
+          // Check if domain matches hostname (exact match)
+          if (hostname === domain) {
+            return project;
+          }
+          
+          // Check for wildcard matches
+          if (domain.includes('*')) {
+            const regexPattern = domain
+              .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape special chars
+              .replace(/\*/g, '.*'); // Replace * with .*
+            
+            const regex = new RegExp(`^${regexPattern}$`);
+            if (regex.test(hostname)) {
+              return project;
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+};
+
+const ProtocolTools = {
+  // Check if domain has a forced protocol
+  getForcedProtocol: function(domain, protocolRules) {
+    for (const rule of protocolRules) {
+      if (!rule.includes('|')) continue;
+      
+      const [pattern, protocol] = rule.split('|');
+      const trimmedPattern = pattern.trim();
+      const trimmedProtocol = protocol.trim();
+      
+      if (this.matchesDomainPattern(domain, trimmedPattern)) {
+        return trimmedProtocol + ':';
+      }
+    }
+    return null;
+  },
+  
+  // Check if domain matches a pattern
+  matchesDomainPattern: function(domain, pattern) {
+    // Escape regex special chars but keep * as wildcard
+    const regexPattern = pattern
+      .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape special chars
+      .replace(/\*/g, '[^.]+'); // Replace * with regex for "any chars except dot"
+    
+    try {
+      const regex = new RegExp(`^${regexPattern}$`);
+      return regex.test(domain);
+    } catch (e) {
+      console.error('Invalid regex pattern:', regexPattern, e);
+      return false;
+    }
+  }
+};
+
+// Initialize EnvSwitcher global object
+window.EnvSwitcher = {
+  storage: Storage,
+  url: UrlTools,
+  project: ProjectTools,
+  protocol: ProtocolTools,
+  saveSetting: function(key, value, callback) {
+    const data = {};
+    data[key] = value;
+    chrome.storage.sync.set(data, callback || function() {
+      console.log(`Saved setting: ${key}`);
+    });
+  }
+};
+
 // Add helper function to check if a hostname matches a domain pattern (supporting wildcards)
 function matchesDomain(hostname, pattern) {
   // If the pattern contains a wildcard
@@ -178,82 +323,212 @@ class HtmxEnvSwitcherUI {
   
   // Initialize the floating UI
   initialize() {
+    console.log('Initializing htmx UI...');
+    
     // Load the htmx library if not already loaded
     this.loadHtmxIfNeeded().then(() => {
+      console.log('HTMX library loaded successfully');
+      
       // Fetch the HTML template
-      fetch(chrome.runtime.getURL('floating-ui.html'))
-        .then(response => response.text())
+      const templateUrl = chrome.runtime.getURL('floating-ui.html');
+      console.log('Fetching template from:', templateUrl);
+      
+      fetch(templateUrl)
+        .then(response => {
+          console.log('Template fetch response:', response.status);
+          return response.text();
+        })
         .then(html => {
-          // Create a temporary div to hold the template
-          const tempDiv = document.createElement('div');
-          tempDiv.innerHTML = html;
-          
-          // Extract the template content
-          const template = tempDiv.querySelector('#env-switcher-floating-template');
-          
-          if (!template) {
-            console.error('Floating UI template not found!');
-            return;
-          }
-          
-          // Clone the template
-          const floatingUI = template.cloneNode(true);
-          floatingUI.id = 'env-switcher-floating';
-          floatingUI.style.display = 'block';
-          
-          // Get the actual UI container (not the wrapper)
-          this.container = floatingUI.querySelector('.env-switcher-floating');
-          
-          // Set collapsed state if needed
-          if (this.collapsed) {
-            this.container.classList.add('env-switcher-floating--collapsed');
-          }
-          
-          // Populate project select
-          const projectSelect = this.container.querySelector('#project-select');
-          this.projects.forEach(project => {
-            const option = document.createElement('option');
-            option.value = project.name;
-            option.text = project.name;
-            option.selected = this.currentProject && project.name === this.currentProject.name;
-            projectSelect.appendChild(option);
-          });
-          
-          // Populate domain select
-          this.updateDomainOptions();
-          
-          // Set protocol if available
-          const protocolSelect = this.container.querySelector('#protocol-select');
-          if (protocolSelect) {
-            // Remove protocol colon if present
-            const currentProtocol = this.currentProtocol.replace(':', '');
-            protocolSelect.value = currentProtocol;
-            
-            // Hide if not needed
-            if (!this.showProtocol) {
-              protocolSelect.style.display = 'none';
-            }
-          }
-          
-          // Set checkbox states
-          this.container.querySelector('#auto-redirect').checked = this.autoRedirect;
-          this.container.querySelector('#new-window').checked = this.newWindow;
-          this.container.querySelector('#incognito').checked = this.incognitoMode;
-          
-          // Show/hide go button based on auto-redirect
-          const goButton = this.container.querySelector('#go-button');
-          goButton.style.display = this.autoRedirect ? 'none' : 'inline-block';
-          
-          // Append to DOM
-          document.body.appendChild(floatingUI);
-          
-          // Load the Chrome-htmx extension
-          this.loadChromeExtension();
+          console.log('Template HTML loaded, length:', html.length);
+          this.processTemplate(html);
         })
         .catch(error => {
           console.error('Error loading floating UI template:', error);
+          console.log('Using fallback template');
+          // Use fallback template
+          const fallbackTemplate = this.getFallbackTemplate();
+          this.processTemplate(fallbackTemplate);
         });
+    }).catch(error => {
+      console.error('Error loading HTMX library:', error);
     });
+  }
+  
+  // Process the HTML template
+  processTemplate(html) {
+    // Create a temporary div to hold the template
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    
+    // Extract the template content
+    const template = tempDiv.querySelector('#env-switcher-floating-template');
+    
+    if (!template) {
+      console.error('Floating UI template not found in HTML!', html.substring(0, 200) + '...');
+      return;
+    }
+    
+    console.log('Template found, creating UI instance');
+    
+    // Clone the template
+    const floatingUI = template.cloneNode(true);
+    floatingUI.id = 'env-switcher-floating';
+    floatingUI.style.display = 'block';
+    
+    // Get the actual UI container (not the wrapper)
+    this.container = floatingUI.querySelector('.env-switcher-floating');
+    
+    if (!this.container) {
+      console.error('Container element not found in template!');
+      return;
+    }
+    
+    console.log('Container element found, setting up UI');
+    
+    // Set collapsed state if needed
+    if (this.collapsed) {
+      this.container.classList.add('env-switcher-floating--collapsed');
+    }
+    
+    // Populate project select
+    const projectSelect = this.container.querySelector('#project-select');
+    if (!projectSelect) {
+      console.error('Project select element not found!');
+      return;
+    }
+    
+    this.projects.forEach(project => {
+      const option = document.createElement('option');
+      option.value = project.name;
+      option.text = project.name;
+      option.selected = this.currentProject && project.name === this.currentProject.name;
+      projectSelect.appendChild(option);
+    });
+    
+    // Populate domain select
+    this.updateDomainOptions();
+    
+    // Set protocol if available
+    const protocolSelect = this.container.querySelector('#protocol-select');
+    if (protocolSelect) {
+      // Remove protocol colon if present
+      const currentProtocol = this.currentProtocol.replace(':', '');
+      protocolSelect.value = currentProtocol;
+      
+      // Hide if not needed
+      if (!this.showProtocol) {
+        protocolSelect.style.display = 'none';
+      }
+    }
+    
+    // Set checkbox states
+    const autoRedirectCheckbox = this.container.querySelector('#auto-redirect');
+    if (autoRedirectCheckbox) {
+      autoRedirectCheckbox.checked = this.autoRedirect;
+    }
+    
+    const newWindowCheckbox = this.container.querySelector('#new-window');
+    if (newWindowCheckbox) {
+      newWindowCheckbox.checked = this.newWindow;
+    }
+    
+    const incognitoCheckbox = this.container.querySelector('#incognito');
+    if (incognitoCheckbox) {
+      incognitoCheckbox.checked = this.incognitoMode;
+    }
+    
+    // Show/hide go button based on auto-redirect
+    const goButton = this.container.querySelector('#go-button');
+    if (goButton) {
+      goButton.style.display = this.autoRedirect ? 'none' : 'inline-block';
+    }
+    
+    console.log('Adding UI to DOM...');
+    // Append to DOM
+    document.body.appendChild(floatingUI);
+    console.log('UI added to DOM');
+    
+    // Load the Chrome-htmx extension
+    this.loadChromeExtension();
+  }
+  
+  // Get fallback template in case the HTML file can't be loaded
+  getFallbackTemplate() {
+    return `
+    <div id="env-switcher-floating-template" style="display: none;">
+      <div class="env-switcher-floating" hx-ext="chrome-ext">
+        <button class="env-switcher-floating__toggle"
+                hx-post="chrome-ext:/toggle-collapse"
+                hx-swap="outerHTML"
+                hx-target="closest .env-switcher-floating">−</button>
+                
+        <div class="env-switcher-floating__content">
+          <!-- Row 1: Project select and protocol -->
+          <div class="env-switcher-floating__row">
+            <select class="env-switcher-floating__select" 
+                    id="project-select"
+                    hx-post="chrome-ext:/change-project"
+                    hx-target="#domain-select-container">
+            </select>
+            
+            <select class="env-switcher-floating__select"
+                    id="protocol-select"
+                    hx-post="chrome-ext:/update-protocol">
+              <option value="http">http</option>
+              <option value="https" selected>https</option>
+            </select>
+          </div>
+          
+          <!-- Row 2: Domain selection -->
+          <div class="env-switcher-floating__row" id="domain-select-container">
+            <select class="env-switcher-floating__select domain-select"
+                    id="domain-select"
+                    hx-post="chrome-ext:/update-domain"
+                    hx-trigger="change, load">
+            </select>
+          </div>
+          
+          <!-- Row 3: Go button and checkboxes -->
+          <div class="env-switcher-floating__row">
+            <button class="env-switcher-floating__action-btn"
+                    id="go-button"
+                    hx-post="chrome-ext:/navigate"
+                    hx-include="#domain-select, #protocol-select">Go</button>
+            
+            <div class="env-switcher-floating__checkbox-container">
+              <input type="checkbox" id="auto-redirect" checked 
+                     hx-post="chrome-ext:/toggle-auto-redirect"
+                     hx-trigger="change">
+              <label for="auto-redirect" class="env-switcher-floating__label">Auto</label>
+            </div>
+            
+            <div class="env-switcher-floating__checkbox-container">
+              <input type="checkbox" id="new-window"
+                     hx-post="chrome-ext:/toggle-new-window"
+                     hx-trigger="change">
+              <label for="new-window" class="env-switcher-floating__label">New Window</label>
+            </div>
+            
+            <div class="env-switcher-floating__checkbox-container">
+              <input type="checkbox" id="incognito"
+                     hx-post="chrome-ext:/toggle-incognito"
+                     hx-trigger="change">
+              <label for="incognito" class="env-switcher-floating__label">Incognito</label>
+            </div>
+          </div>
+          
+          <!-- Row 4: Copy path and Copy URL buttons -->
+          <div class="env-switcher-floating__row">
+            <button class="env-switcher-floating__action-btn"
+                    hx-post="chrome-ext:/copy-path">Path</button>
+            
+            <button class="env-switcher-floating__action-btn"
+                    hx-post="chrome-ext:/copy-url">URL</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    `;
   }
   
   // Load htmx library if not already present
@@ -274,9 +549,116 @@ class HtmxEnvSwitcherUI {
   
   // Load the Chrome extension for htmx
   loadChromeExtension() {
+    try {
+      const scriptUrl = chrome.runtime.getURL('htmx-chrome-ext.js');
+      console.log('Loading Chrome extension from:', scriptUrl);
+      
+      fetch(scriptUrl)
+        .then(response => {
+          console.log('Extension script response:', response.status);
+          return response.text();
+        })
+        .then(scriptText => {
+          if (scriptText && scriptText.length > 0) {
+            // Create a script element
+            const script = document.createElement('script');
+            script.textContent = scriptText;
+            document.head.appendChild(script);
+            console.log('Chrome extension script injected from file');
+          } else {
+            this.injectFallbackExtensionCode();
+          }
+        })
+        .catch(error => {
+          console.error('Error loading Chrome extension script:', error);
+          this.injectFallbackExtensionCode();
+        });
+    } catch (e) {
+      console.error('Error getting extension script URL:', e);
+      this.injectFallbackExtensionCode();
+    }
+  }
+  
+  // Inject fallback extension code
+  injectFallbackExtensionCode() {
+    console.log('Injecting fallback extension code');
     const script = document.createElement('script');
-    script.src = chrome.runtime.getURL('htmx-chrome-ext.js');
+    script.textContent = `
+    (function() {
+      // Register the chrome-ext extension with htmx
+      htmx.defineExtension('chrome-ext', {
+        onEvent: function(name, evt) {
+          // We only want to handle trigger events
+          if (name !== 'htmx:beforeRequest') return true;
+          
+          // Check if the request is directed to our chrome-ext protocol
+          const path = evt.detail.path;
+          if (!path.startsWith('chrome-ext:/')) return true;
+          
+          // Prevent the default htmx Ajax request
+          evt.preventDefault();
+          
+          // Extract the endpoint name (removing the protocol prefix)
+          const endpoint = path.replace('chrome-ext:/', '');
+          
+          // Extract values from the triggering element
+          const elt = evt.detail.elt;
+          const target = htmx.getTarget(elt);
+          const headers = evt.detail.headers;
+          const values = htmx.values(elt);
+          
+          // Create a request payload for the background script
+          const payload = {
+            action: 'htmx',
+            endpoint: endpoint,
+            values: values,
+            headers: headers
+          };
+          
+          // Show the htmx request indicator
+          htmx.addClass(elt, htmx.config.requestClass);
+          
+          // Send message to the background script
+          chrome.runtime.sendMessage(payload, function(response) {
+            // Remove the htmx request indicator
+            htmx.removeClass(elt, htmx.config.requestClass);
+            
+            // Handle the response
+            if (response && response.content) {
+              // Process the response as if it were a normal htmx response
+              const swapSpec = htmx.getSwapSpecification(elt);
+              
+              // Perform the content swap
+              htmx.swap(target, response.content, swapSpec);
+              
+              // Trigger the afterRequest event
+              htmx.process(target);
+              
+              // Trigger a custom event so that listeners know the request is complete
+              htmx.trigger(elt, 'htmx:afterRequest', {
+                path: path,
+                success: true,
+                requestConfig: evt.detail
+              });
+            } else if (response && response.error) {
+              console.error('Chrome extension htmx error:', response.error);
+              
+              // Trigger error event
+              htmx.trigger(elt, 'htmx:responseError', {
+                error: response.error,
+                path: path
+              });
+            }
+          });
+          
+          // Prevent the default htmx handling
+          return false;
+        }
+      });
+    })();
+    `;
     document.head.appendChild(script);
+    console.log('Fallback extension code injected');
   }
   
   // Update domain options (called from background.js)
@@ -419,21 +801,40 @@ class HtmxEnvSwitcherUI {
   }
 }
 
-// Initialize EnvSwitcher global object if not already defined
-if (typeof EnvSwitcher === 'undefined') {
-  window.EnvSwitcher = {
-    storage: Storage,
-    url: UrlTools,
-    project: ProjectTools,
-    protocol: ProtocolTools
-  };
-}
-
 // Create the UI instance
 let envSwitcherUI;
 
 // Initialize when the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('DOMContentLoaded triggered - initializing Environment Switcher UI');
+  
+  // Check if the floating-ui.html is accessible
+  try {
+    const resourceUrl = chrome.runtime.getURL('floating-ui.html');
+    console.log('Checking resource URL:', resourceUrl);
+    
+    fetch(resourceUrl)
+      .then(response => {
+        console.log('Resource fetch response:', response.status, response.ok);
+        if (!response.ok) {
+          console.error('Failed to fetch floating-ui.html:', response.statusText);
+        }
+        return response.text();
+      })
+      .then(text => {
+        console.log('Resource content length:', text.length);
+        if (text.length > 0) {
+          console.log('Resource content sample:', text.substring(0, 100) + '...');
+        }
+      })
+      .catch(err => {
+        console.error('Error fetching resource:', err);
+      });
+  } catch (e) {
+    console.error('Error getting resource URL:', e);
+  }
+  
+  // Create the UI instance
   envSwitcherUI = new HtmxEnvSwitcherUI();
 });
 
