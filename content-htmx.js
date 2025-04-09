@@ -1,7 +1,7 @@
 // Environment Detector - Content Script (htmx version)
 
 // Import shared functionality
-const Storage = {
+const EnvStorage = {
   keys: {
     PROJECTS: 'projects',
     PROTOCOL_RULES: 'protocolRules',
@@ -132,7 +132,7 @@ const ProtocolTools = {
 
 // Initialize EnvSwitcher global object
 window.EnvSwitcher = {
-  storage: Storage,
+  storage: EnvStorage,
   url: UrlTools,
   project: ProjectTools,
   protocol: ProtocolTools,
