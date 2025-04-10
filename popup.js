@@ -1,3 +1,6 @@
+(function() {
+  'use strict';
+
 document.addEventListener('DOMContentLoaded', function() {
   // DOM elements that exist in the HTML
   const projectNameElement = document.getElementById('project-name');
@@ -211,41 +214,45 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Toggle floating UI button click handler
   toggleFloatingButton.addEventListener('click', function() {
-    if (!currentProject) return;
-    
-    // Toggle the state
-    const newState = !currentProject.floatingEnabled;
-    
-    // Send message to content script
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-      if (tabs && tabs.length > 0) {
-        chrome.tabs.sendMessage(
-          tabs[0].id, 
-          { 
+    if (currentProject) {
+      // Toggle the enabled state
+      const newState = !currentProject.floatingEnabled;
+      
+      // Update UI
+      currentProject.floatingEnabled = newState;
+      updateToggleButton();
+      
+      // Send message to content script to toggle UI
+      chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+        if (tabs && tabs.length > 0) {
+          chrome.tabs.sendMessage(tabs[0].id, {
             action: 'toggleFloatingUI',
             enabled: newState,
             projectName: currentProject.name
-          },
-          function(response) {
-            // Update storage
-            chrome.storage.sync.get('projects', function(data) {
-              const projects = data.projects || [];
-              const index = projects.findIndex(p => p.name === currentProject.name);
-              
-              if (index !== -1) {
-                projects[index].floatingEnabled = newState;
-                currentProject.floatingEnabled = newState;
-                
-                chrome.storage.sync.set({projects: projects}, function() {
-                  console.log('Updated project state:', newState);
-                  updateToggleButton();
-                });
-              }
-            });
-          }
-        );
-      }
-    });
+          }, function(response) {
+            console.log('Response from content script:', response);
+          });
+        }
+      });
+      
+      // Save to storage
+      chrome.storage.sync.get('projects', function(data) {
+        let projects = data.projects || [];
+        
+        // Find the project index
+        const projectIndex = projects.findIndex(p => p.name === currentProject.name);
+        
+        if (projectIndex !== -1) {
+          // Update the project
+          projects[projectIndex].floatingEnabled = newState;
+          
+          // Save back to storage
+          chrome.storage.sync.set({ projects: projects }, function() {
+            console.log('Project updated:', currentProject.name, 'floatingEnabled =', newState);
+          });
+        }
+      });
+    }
   });
   
   // Configure button click handler
@@ -255,4 +262,6 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Initialize
   init();
-}); 
+});
+
+})(); 

@@ -1,3 +1,9 @@
+(function() {
+  'use strict';
+  
+// Get the EnvSwitcher from the namespace
+const EnvSwitcher = window.EnvSwitcherNamespace.EnvSwitcher;
+
 // Environment Detector - Content Script
 
 // Add helper function to check if a hostname matches a domain pattern (supporting wildcards)
@@ -978,4 +984,6 @@ document.addEventListener('DOMContentLoaded', initializeUI);
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
   console.log('Document already loaded, initializing Environment Switcher UI now');
   setTimeout(initializeUI, 100); // Small delay to ensure other scripts have run
-} 
+}
+
+})(); // End of IIFE 

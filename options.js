@@ -1,3 +1,6 @@
+(function() {
+  'use strict';
+
 document.addEventListener('DOMContentLoaded', function() {
   // DOM elements
   const projectsContainer = document.getElementById('projects-container');
@@ -713,4 +716,6 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Initialize the page
   loadSettings();
-}); 
+})();
+
+})(); 

@@ -1,3 +1,6 @@
+(function() {
+  'use strict';
+
 // Environment Switcher background script
 
 // Initialize default settings when extension is installed
@@ -77,3 +80,5 @@ function findProjectForDomain(hostname, projects) {
   }
   return null;
 }
+
+})();

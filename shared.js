@@ -1,3 +1,6 @@
+(function() {
+  'use strict';
+
 // shared.js - Common functionality for Environment Switcher
 
 // Storage module
@@ -241,5 +244,9 @@ const EnvSwitcher = {
   }
 };
 
-// Export the EnvSwitcher object
-window.EnvSwitcher = EnvSwitcher; 
+// Expose the EnvSwitcher object to the content script scope only (not the global window)
+// This allows communication between extension scripts while maintaining isolation
+window.EnvSwitcherNamespace = window.EnvSwitcherNamespace || {};
+window.EnvSwitcherNamespace.EnvSwitcher = EnvSwitcher;
+
+})(); // End of IIFE 
