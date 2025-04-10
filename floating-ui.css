@@ -14,13 +14,49 @@
   max-width: 100%;
   width: auto;
   height: auto;
-  /* Isolate CSS to avoid affecting other elements */
-  all: initial;
-  * {
-    all: revert;
-    box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* CSS isolation - more specific approach */
+  contain: content;
+}
+
+/* Custom CSS variables for the switcher */
+:root {
+  --env-switcher-primary-bg: #fff;
+  --env-switcher-border-color: #ddd;
+  --env-switcher-input-bg: #f9f9f9;
+  --env-switcher-text-color: #333;
+  --env-switcher-primary-color: #0074D9;
+  --env-switcher-primary-color-hover: #0063b1;
+  --env-switcher-primary-color-active: #005294;
+  --env-switcher-secondary-color: #2ecc71;
+  --env-switcher-hover-bg: #f0f0f0;
+}
+
+/* Apply dark mode variables */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --env-switcher-primary-bg: #222;
+    --env-switcher-border-color: #444;
+    --env-switcher-input-bg: #333;
+    --env-switcher-text-color: #eee;
+    --env-switcher-primary-color: #3498db;
+    --env-switcher-primary-color-hover: #2980b9;
+    --env-switcher-primary-color-active: #2471a3;
+    --env-switcher-secondary-color: #2ecc71;
+    --env-switcher-hover-bg: #333;
   }
+}
+
+/* Override the variables in the component */
+.env-switcher-floating {
+  --primary-bg: var(--env-switcher-primary-bg);
+  --border-color: var(--env-switcher-border-color);
+  --input-bg: var(--env-switcher-input-bg);
+  --text-color: var(--env-switcher-text-color);
+  --primary-color: var(--env-switcher-primary-color);
+  --primary-color-hover: var(--env-switcher-primary-color-hover);
+  --primary-color-active: var(--env-switcher-primary-color-active);
+  --secondary-color: var(--env-switcher-secondary-color);
+  --hover-bg: var(--env-switcher-hover-bg);
 }
 
 .env-switcher-floating__content {
@@ -199,31 +235,21 @@
   display: none;
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .env-switcher-floating {
-    --primary-bg: #222;
-    --border-color: #444;
-    --input-bg: #333;
-    --text-color: #eee;
-    --primary-color: #3498db;
-    --primary-color-hover: #2980b9;
-    --primary-color-active: #2471a3;
-    --secondary-color: #2ecc71;
-    --hover-bg: #333;
-  }
-  
-  .env-switcher-floating__checkbox-container label {
-    color: #eee;
-  }
-  
-  .env-switcher-floating__select {
-    color: #eee;
-  }
-  
-  /* This ensures the dropdown options are readable in dark mode */
-  .env-switcher-floating__select option {
-    background-color: #333;
-    color: #eee;
-  }
+/* Feedback message style */
+.env-switcher-floating__feedback {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  transition: opacity 0.5s ease;
+}
+
+.env-switcher-floating__feedback--fade-out {
+  opacity: 0;
 } 

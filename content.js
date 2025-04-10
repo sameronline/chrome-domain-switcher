@@ -114,20 +114,24 @@ class EnvSwitcherUI {
   }
   
   // Initialize the floating UI
-  initialize() {
+  async initialize() {
     // Load the CSS dynamically only when needed
-    this.loadFloatingUiCSS();
-    
-    // Build the UI
-    this.buildUI();
-    
-    // Only continue if UI was built successfully
-    if (!this.container) {
-      return;
+    try {
+      await this.loadFloatingUiCSS();
+      
+      // Build the UI
+      this.buildUI();
+      
+      // Only continue if UI was built successfully
+      if (!this.container) {
+        return;
+      }
+      
+      // Add to the DOM
+      this.appendToDOM();
+    } catch (error) {
+      console.error('Failed to initialize floating UI:', error);
     }
-    
-    // Add to the DOM
-    this.appendToDOM();
   }
   
   // Dynamically load the floating UI CSS
@@ -143,9 +147,15 @@ class EnvSwitcherUI {
     link.id = 'env-switcher-floating-ui-css';
     link.href = chrome.runtime.getURL('floating-ui.css');
     
-    // Append to head
-    document.head.appendChild(link);
-    console.log('Loaded floating UI CSS dynamically');
+    // Create a promise to ensure CSS is loaded
+    return new Promise((resolve, reject) => {
+      link.onload = resolve;
+      link.onerror = reject;
+      document.head.appendChild(link);
+      console.log('Loading floating UI CSS dynamically');
+    }).catch(error => {
+      console.error('Failed to load floating UI CSS:', error);
+    });
   }
   
   // Remove the floating UI CSS
@@ -687,7 +697,7 @@ class EnvSwitcherUI {
   }
   
   // Enable floating UI for a specific project
-  enableForProject(projectName) {
+  async enableForProject(projectName) {
     console.log(`Enabling floating UI for project: ${projectName}`);
     
     // Find the project
@@ -706,7 +716,7 @@ class EnvSwitcherUI {
       // Only create and add UI elements if they don't already exist
       if (!this.container) {
         this.enabled = true;
-        this.initialize();
+        await this.initialize();
       } else {
         // If UI exists but is hidden, show it
         this.show();
@@ -744,26 +754,21 @@ class EnvSwitcherUI {
   
   // Helper method to show a toast notification
   showToast(message) {
+    // Create toast element
     const toast = document.createElement('div');
-    toast.style.position = 'fixed';
-    toast.style.bottom = '70px';
-    toast.style.right = '20px';
-    toast.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-    toast.style.color = 'white';
-    toast.style.padding = '10px 20px';
-    toast.style.borderRadius = '4px';
-    toast.style.zIndex = '1000000';
-    toast.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    toast.className = 'env-switcher-floating-toast';
     toast.textContent = message;
     
+    // Append to document
     document.body.appendChild(toast);
     
+    // Set timeout to remove
     setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transition = 'opacity 0.5s ease';
-      
+      toast.classList.add('env-switcher-floating-toast--fade-out');
       setTimeout(() => {
-        document.body.removeChild(toast);
+        if (toast.parentNode) {
+          document.body.removeChild(toast);
+        }
       }, 500);
     }, 2000);
   }
@@ -888,8 +893,13 @@ class EnvSwitcherUI {
     
     // Remove after 2 seconds
     setTimeout(() => {
-      this.container.removeChild(feedback);
-    }, 2000);
+      feedback.classList.add('env-switcher-floating__feedback--fade-out');
+      setTimeout(() => {
+        if (feedback.parentNode) {
+          this.container.removeChild(feedback);
+        }
+      }, 500);
+    }, 1500);
   }
 
   /**
@@ -932,16 +942,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       envSwitcherUI = new EnvSwitcherUI();
     }
     
-    // Wait a moment to ensure the UI is properly initialized
-    setTimeout(() => {
-      if (message.enabled) {
-        envSwitcherUI.enableForProject(message.projectName);
-      } else {
-        envSwitcherUI.disableForProject(message.projectName);
+    // Handle async operation
+    (async () => {
+      try {
+        if (message.enabled) {
+          await envSwitcherUI.enableForProject(message.projectName);
+        } else {
+          envSwitcherUI.disableForProject(message.projectName);
+        }
+        
+        sendResponse({ success: true });
+      } catch (error) {
+        console.error('Error toggling floating UI:', error);
+        sendResponse({ success: false, error: error.message });
       }
-      
-      sendResponse({ success: true });
-    }, 100);
+    })();
     
     // Return true to indicate we'll send a response asynchronously
     return true;
