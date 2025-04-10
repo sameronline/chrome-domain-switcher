@@ -433,12 +433,6 @@ class EnvSwitcherUI {
       separator.className = 'env-switcher-floating__separator';
       this.toolsContainer.appendChild(separator);
       
-      // Add heading
-      const toolsHeading = document.createElement('div');
-      toolsHeading.className = 'env-switcher-floating__tools-heading';
-      toolsHeading.textContent = 'Tools';
-      this.toolsContainer.appendChild(toolsHeading);
-      
       // Create tools grid
       const toolsGrid = document.createElement('div');
       toolsGrid.className = 'env-switcher-floating__tools-grid';
@@ -455,8 +449,8 @@ class EnvSwitcherUI {
         const icon = document.createElement('img');
         icon.className = 'env-switcher-floating__tool-icon';
         icon.alt = tool.label;
-        icon.width = 26;
-        icon.height = 26;
+        icon.width = 16;
+        icon.height = 16;
         
         // Try to get favicon for the domain
         const domain = this.extractDomainFromUrl(tool.url);
@@ -469,18 +463,12 @@ class EnvSwitcherUI {
           
           icon.onerror = () => {
             // If all favicon attempts fail, show a generic icon
-            icon.src = `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNiIgaGVpZ2h0PSIyNiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIj48L2NpcmNsZT48bGluZSB4MT0iMTIiIHkxPSI4IiB4Mj0iMTIiIHkyPSIxNiI+PC9saW5lPjxsaW5lIHgxPSI4IiB5MT0iMTIiIHgyPSIxNiIgeTI9IjEyIj48L2xpbmU+PC9zdmc+`;
+            icon.src = `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIj48L2NpcmNsZT48bGluZSB4MT0iMTIiIHkxPSI4IiB4Mj0iMTIiIHkyPSIxNiI+PC9saW5lPjxsaW5lIHgxPSI4IiB5MT0iMTIiIHgyPSIxNiIgeTI9IjEyIj48L2xpbmU+PC9zdmc+`;
             icon.style.filter = 'invert(0.5)';
           };
         };
         
         toolButton.appendChild(icon);
-        
-        // Add label
-        const label = document.createElement('span');
-        label.className = 'env-switcher-floating__tool-label';
-        label.textContent = tool.label;
-        toolButton.appendChild(label);
         
         toolsGrid.appendChild(toolButton);
       });
