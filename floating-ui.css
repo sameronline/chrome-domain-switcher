@@ -80,6 +80,7 @@
   background-color: var(--input-bg, #f9f9f9);
   color: var(--text-color, #333);
   font-size: 12px;
+  max-width: 100%;
 }
 
 .env-switcher-floating__select.domain-select {
