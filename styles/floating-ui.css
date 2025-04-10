@@ -1,0 +1,190 @@
+/**
+ * Floating UI styles for Environment Switcher
+ */
+
+@import url('variables.css');
+
+/* Container */
+.env-switcher-container {
+  position: fixed;
+  bottom: var(--env-switcher-spacing-md);
+  right: var(--env-switcher-spacing-md);
+  z-index: var(--env-switcher-z-index-floating);
+  font-family: var(--env-switcher-font-family);
+  font-size: var(--env-switcher-font-size-normal);
+  color: var(--env-switcher-dark);
+  box-sizing: border-box;
+}
+
+.env-switcher-container * {
+  box-sizing: border-box;
+}
+
+/* Toggle Button */
+.env-switcher-toggle-button {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--env-switcher-border-radius-round);
+  background-color: var(--env-switcher-primary);
+  border: none;
+  cursor: pointer;
+  box-shadow: var(--env-switcher-shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  z-index: calc(var(--env-switcher-z-index-floating) + 1);
+  transition: transform var(--env-switcher-transition-normal);
+}
+
+.env-switcher-toggle-button:hover {
+  background-color: var(--env-switcher-primary-dark);
+  transform: scale(1.1);
+}
+
+.env-switcher-toggle-icon {
+  width: 16px;
+  height: 16px;
+  position: relative;
+}
+
+.env-switcher-toggle-icon::before,
+.env-switcher-toggle-icon::after {
+  content: '';
+  position: absolute;
+  background-color: white;
+  transition: transform var(--env-switcher-transition-normal);
+}
+
+.env-switcher-toggle-icon::before {
+  width: 16px;
+  height: 2px;
+  top: 7px;
+  left: 0;
+}
+
+.env-switcher-toggle-icon::after {
+  width: 2px;
+  height: 16px;
+  top: 0;
+  left: 7px;
+}
+
+.env-switcher-content.collapsed + .env-switcher-toggle-button .env-switcher-toggle-icon::after {
+  transform: rotate(90deg);
+}
+
+/* Content Panel */
+.env-switcher-content {
+  background-color: white;
+  border-radius: var(--env-switcher-border-radius-lg);
+  padding: var(--env-switcher-spacing-md);
+  box-shadow: var(--env-switcher-shadow-md);
+  min-width: 250px;
+  max-width: 350px;
+  transform-origin: bottom right;
+  transition: all var(--env-switcher-transition-normal);
+  opacity: 1;
+  transform: scale(1);
+  margin-bottom: var(--env-switcher-spacing-md);
+  margin-right: var(--env-switcher-spacing-md);
+}
+
+.env-switcher-content.collapsed {
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+}
+
+/* Form Fields */
+.env-switcher-field {
+  margin-bottom: var(--env-switcher-spacing-md);
+}
+
+.env-switcher-field label {
+  display: block;
+  margin-bottom: var(--env-switcher-spacing-xs);
+  font-size: var(--env-switcher-font-size-small);
+  color: var(--env-switcher-gray);
+}
+
+.env-switcher-select {
+  width: 100%;
+  padding: var(--env-switcher-spacing-sm);
+  border: 1px solid var(--env-switcher-border);
+  border-radius: var(--env-switcher-border-radius);
+  background-color: var(--env-switcher-light);
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* Buttons */
+.env-switcher-button {
+  padding: var(--env-switcher-spacing-sm) var(--env-switcher-spacing-md);
+  border-radius: var(--env-switcher-border-radius);
+  border: none;
+  background-color: var(--env-switcher-light);
+  color: var(--env-switcher-dark);
+  font-family: inherit;
+  font-size: var(--env-switcher-font-size-small);
+  cursor: pointer;
+  transition: background-color var(--env-switcher-transition-fast);
+  border: 1px solid var(--env-switcher-border);
+}
+
+.env-switcher-button:hover {
+  background-color: var(--env-switcher-gray-light);
+}
+
+.env-switcher-go-button {
+  width: 100%;
+  background-color: var(--env-switcher-primary);
+  color: white;
+  margin-bottom: var(--env-switcher-spacing-md);
+  font-weight: bold;
+}
+
+.env-switcher-go-button:hover {
+  background-color: var(--env-switcher-primary-dark);
+}
+
+/* Button Groups */
+.env-switcher-button-group {
+  display: flex;
+  gap: var(--env-switcher-spacing-sm);
+}
+
+.env-switcher-button-group .env-switcher-button {
+  flex: 1;
+}
+
+/* Toast notifications */
+.env-switcher-toast {
+  padding: var(--env-switcher-spacing-sm) var(--env-switcher-spacing-md);
+  background-color: var(--env-switcher-dark);
+  color: white;
+  border-radius: var(--env-switcher-border-radius);
+  margin-top: var(--env-switcher-spacing-sm);
+  box-shadow: var(--env-switcher-shadow-sm);
+  opacity: 0;
+  transform: translateY(10px);
+  animation: toast-appear 0.3s forwards;
+}
+
+@keyframes toast-appear {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive adaptations */
+@media (max-width: 768px) {
+  .env-switcher-content {
+    min-width: 200px;
+    max-width: 280px;
+  }
+} 

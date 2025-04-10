@@ -2,67 +2,75 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Environment Switcher Options</title>
-  <link rel="stylesheet" href="options.css">
-  <link rel="stylesheet" href="options-dialog.css">
+  <link rel="stylesheet" href="styles/options.css">
 </head>
 <body>
-  <h1>Environment Switcher Settings</h1>
-  
-  <div class="form-section">
-    <h2>Projects</h2>
-    <div class="description">Manage your projects and their associated domains. You can add labels to domains to make them more recognizable in the UI.</div>
+  <div class="env-switcher-options">
+    <header class="env-switcher-options__header">
+      <h1>Environment Switcher Configuration</h1>
+      <p>Configure your projects, domains, and settings</p>
+    </header>
     
-    <div id="projects-container">
-      <!-- Project items will be added here via JS -->
-    </div>
-    
-    <div class="add-project-form">
-      <input type="text" id="new-project" placeholder="Enter project name">
-      <button id="add-project">Add Project</button>
-    </div>
-  </div>
-  
-  <div class="form-section">
-    <h2>Protocol Rules</h2>
-    <div class="description">Configure protocol rules using domain patterns. Format: pattern|protocol (e.g. *.dev.example.com|https)</div>
-    
-    <div class="form-row">
-      <textarea id="protocol-rules" placeholder="*.dev.example.com|https
+    <main class="env-switcher-options__content">
+      <div class="env-switcher-options__section">
+        <h2>Projects</h2>
+        <div id="projects-container" class="env-switcher-options__projects">
+          <!-- Projects will be generated here -->
+        </div>
+        
+        <div class="env-switcher-options__add-project">
+          <input type="text" id="new-project" placeholder="New project name">
+          <button id="add-project">Add Project</button>
+        </div>
+      </div>
+      
+      <div class="env-switcher-options__section">
+        <h2>Protocol Rules</h2>
+        <p class="env-switcher-options__help">
+          Define protocol rules in the format: <code>*.domain.com|https</code> (one per line)
+        </p>
+        <textarea id="protocol-rules" class="env-switcher-options__rules" rows="6" 
+          placeholder="*.dev.example.com|https
 *.stage.example.com|https"></textarea>
-    </div>
+      </div>
+      
+      <div class="env-switcher-options__section">
+        <h2>General Settings</h2>
+        
+        <div class="env-switcher-options__setting">
+          <input type="checkbox" id="show-protocol" checked>
+          <label for="show-protocol">Show protocol selector</label>
+        </div>
+        
+        <div class="env-switcher-options__setting">
+          <input type="checkbox" id="auto-collapse" checked>
+          <label for="auto-collapse">Auto-collapse floating UI when clicking outside</label>
+        </div>
+        
+        <div class="env-switcher-options__setting">
+          <input type="checkbox" id="auto-redirect" checked>
+          <label for="auto-redirect">Auto-redirect when selecting a domain</label>
+        </div>
+        
+        <div class="env-switcher-options__setting">
+          <input type="checkbox" id="incognito-mode">
+          <label for="incognito-mode">Open in incognito mode</label>
+        </div>
+      </div>
+    </main>
+    
+    <footer class="env-switcher-options__footer">
+      <button id="save" class="env-switcher-options__button env-switcher-options__button--primary">Save Settings</button>
+      <button id="reset" class="env-switcher-options__button env-switcher-options__button--danger">Reset to Defaults</button>
+    </footer>
   </div>
   
-  <div class="form-section">
-    <h2>UI Settings</h2>
-    
-    <div class="form-row">
-      <label>
-        <input type="checkbox" id="show-protocol" checked>
-        Show protocol switcher
-      </label>
-    </div>
-    
-    <div class="form-row">
-      <label>
-        <input type="checkbox" id="auto-collapse" checked>
-        Auto-collapse floating UI after use
-      </label>
-    </div>
-    
-    <div class="form-row">
-      <label>
-        <input type="checkbox" id="incognito-mode">
-        Open in incognito mode by default
-      </label>
-    </div>
+  <div id="dialog-container" class="env-switcher-options__dialog-container hidden">
+    <!-- Dialogs will be created dynamically -->
   </div>
   
-  <div class="buttons">
-    <button id="reset" class="reset-btn">Reset to Defaults</button>
-    <button id="save" class="save-btn">Save Settings</button>
-  </div>
-  
-  <script src="options.js"></script>
+  <script type="module" src="options.js"></script>
 </body>
 </html> 

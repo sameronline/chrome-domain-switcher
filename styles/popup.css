@@ -1,0 +1,171 @@
+/**
+ * Popup CSS for Environment Switcher
+ */
+
+@import url('variables.css');
+
+/* Reset */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  width: 350px;
+  margin: 0;
+  padding: 0;
+  font-family: var(--env-switcher-font-family);
+  font-size: var(--env-switcher-font-size-normal);
+  color: var(--env-switcher-dark);
+  background-color: white;
+}
+
+/* Main Container */
+.env-switcher {
+  width: 100%;
+}
+
+/* Header */
+.env-switcher__header {
+  padding: var(--env-switcher-spacing-md);
+  background-color: var(--env-switcher-primary);
+  color: white;
+  border-bottom: 1px solid var(--env-switcher-primary-dark);
+}
+
+.env-switcher__title {
+  font-size: var(--env-switcher-font-size-large);
+  margin-bottom: var(--env-switcher-spacing-xs);
+}
+
+.env-switcher__project {
+  font-size: var(--env-switcher-font-size-small);
+  opacity: 0.9;
+}
+
+.env-switcher__project-label {
+  font-weight: bold;
+}
+
+/* Content */
+.env-switcher__content {
+  padding: var(--env-switcher-spacing-md);
+}
+
+/* Fields */
+.env-switcher__field {
+  margin-bottom: var(--env-switcher-spacing-md);
+}
+
+.env-switcher__field label {
+  display: block;
+  margin-bottom: var(--env-switcher-spacing-xs);
+  font-size: var(--env-switcher-font-size-small);
+  color: var(--env-switcher-gray);
+}
+
+.env-switcher__select {
+  width: 100%;
+  padding: var(--env-switcher-spacing-sm);
+  border: 1px solid var(--env-switcher-border);
+  border-radius: var(--env-switcher-border-radius);
+  background-color: var(--env-switcher-light);
+  font-family: inherit;
+}
+
+/* Actions */
+.env-switcher__actions {
+  margin-bottom: var(--env-switcher-spacing-md);
+}
+
+/* Options */
+.env-switcher__options {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: var(--env-switcher-spacing-md);
+}
+
+.env-switcher__checkbox-group {
+  margin-right: var(--env-switcher-spacing-md);
+  margin-bottom: var(--env-switcher-spacing-sm);
+  display: flex;
+  align-items: center;
+}
+
+.env-switcher__checkbox-group input {
+  margin-right: var(--env-switcher-spacing-xs);
+}
+
+.env-switcher__checkbox-group label {
+  font-size: var(--env-switcher-font-size-small);
+  cursor: pointer;
+}
+
+/* Tools */
+.env-switcher__tools {
+  display: flex;
+  gap: var(--env-switcher-spacing-sm);
+  margin-bottom: var(--env-switcher-spacing-md);
+}
+
+.env-switcher__tools .env-switcher__btn {
+  flex: 1;
+}
+
+/* Footer */
+.env-switcher__footer {
+  border-top: 1px solid var(--env-switcher-border);
+  padding-top: var(--env-switcher-spacing-md);
+  display: flex;
+  gap: var(--env-switcher-spacing-sm);
+}
+
+/* Buttons */
+.env-switcher__btn {
+  padding: var(--env-switcher-spacing-sm) var(--env-switcher-spacing-md);
+  border-radius: var(--env-switcher-border-radius);
+  border: 1px solid var(--env-switcher-border);
+  background-color: var(--env-switcher-light);
+  color: var(--env-switcher-dark);
+  font-family: inherit;
+  font-size: var(--env-switcher-font-size-small);
+  cursor: pointer;
+  transition: background-color var(--env-switcher-transition-fast);
+}
+
+.env-switcher__btn:hover {
+  background-color: var(--env-switcher-gray-light);
+}
+
+.env-switcher__btn--primary {
+  background-color: var(--env-switcher-primary);
+  color: white;
+  border-color: var(--env-switcher-primary-dark);
+  width: 100%;
+}
+
+.env-switcher__btn--primary:hover {
+  background-color: var(--env-switcher-primary-dark);
+}
+
+/* Toggle Button States */
+.env-switcher__toggle-btn--hide {
+  background-color: var(--env-switcher-warning);
+  border-color: var(--env-switcher-warning);
+  color: var(--env-switcher-dark);
+}
+
+.env-switcher__toggle-btn--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Error Message */
+.env-switcher__error {
+  padding: var(--env-switcher-spacing-md);
+  background-color: var(--env-switcher-danger);
+  color: white;
+  text-align: center;
+  border-radius: var(--env-switcher-border-radius);
+} 

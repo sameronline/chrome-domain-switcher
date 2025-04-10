@@ -1,267 +1,434 @@
-(function() {
-  'use strict';
+/**
+ * Popup script for Environment Switcher
+ */
 
-document.addEventListener('DOMContentLoaded', function() {
-  // DOM elements that exist in the HTML
-  const projectNameElement = document.getElementById('project-name');
-  const toggleFloatingButton = document.getElementById('toggle-floating');
-  const configureButton = document.getElementById('configure-btn');
+import { parseUrl, matchesDomain, getDomainValue } from './utils/domainUtils.js';
+import { getSettings, saveSetting, STORAGE_KEYS } from './services/storageService.js';
+import { navigateTo, toggleFloatingUI, getCurrentTab } from './services/navigationService.js';
+import { copyToClipboard, showToast } from './utils/uiUtils.js';
+
+// DOM elements
+let projectNameElement;
+let toggleFloatingButton;
+let configureButton;
+let domainSelect;
+let protocolSelect;
+let goButton;
+let copyPathButton;
+let copyUrlButton;
+let autoRedirectCheckbox;
+let newWindowCheckbox;
+let incognitoCheckbox;
+
+// Current URL info
+let currentTab = null;
+let currentUrl = '';
+let currentHostname = '';
+let currentPath = '';
+let currentProtocol = '';
+
+// Current settings
+let currentProject = null;
+let currentSettings = null;
+
+/**
+ * Initialize the popup
+ */
+function init() {
+  // Initialize DOM elements
+  projectNameElement = document.getElementById('project-name');
+  toggleFloatingButton = document.getElementById('toggle-floating');
+  configureButton = document.getElementById('configure-btn');
+  domainSelect = document.getElementById('domain-select');
+  protocolSelect = document.getElementById('protocol-select');
+  goButton = document.getElementById('go-button');
+  copyPathButton = document.getElementById('copy-path');
+  copyUrlButton = document.getElementById('copy-url');
+  autoRedirectCheckbox = document.getElementById('auto-redirect');
+  newWindowCheckbox = document.getElementById('new-window');
+  incognitoCheckbox = document.getElementById('incognito-mode');
   
-  // Current URL info
-  let currentHostname;
-  
-  // Current project
-  let currentProject = null;
-  
-  // Helper function to check if a hostname matches a pattern (supporting wildcards)
-  function matchesDomain(hostname, pattern) {
-    // If the pattern contains a wildcard
-    if (pattern.includes('*')) {
-      // Convert the wildcard pattern to a regular expression
-      // Escape special regex characters but keep * as wildcard
-      const regexPattern = pattern
-        .replace(/[.+?^${}()|[\]\\]/g, '\\$&') // Escape special chars
-        .replace(/\*/g, '.*'); // Replace * with .*
-      
-      // Create a regular expression from the pattern
-      const regex = new RegExp(`^${regexPattern}$`);
-      
-      // Test if the hostname matches the pattern
-      return regex.test(hostname);
+  // Get current tab information
+  getCurrentTab((tab) => {
+    if (!tab) {
+      showError('No active tab found');
+      return;
     }
     
-    // No wildcard, do a direct comparison
-    return hostname === pattern;
-  }
-  
-  // Get domain value from domain entry (which might be a string or object)
-  function getDomainValue(domainEntry) {
-    return typeof domainEntry === 'string' ? domainEntry : domainEntry.domain;
-  }
-  
-  // Auto-add a domain to a project if it matches a wildcard pattern
-  function autoAddDomainIfMatchesWildcard(currentHostname, projects) {
-    // First check if the domain is already in any project
-    let exactMatch = false;
+    currentTab = tab;
     
-    for (const project of projects) {
-      if (project.domains) {
-        const hasExactMatch = project.domains.some(entry => {
-          const domainValue = getDomainValue(entry);
-          return domainValue === currentHostname;
-        });
-        
-        if (hasExactMatch) {
-          exactMatch = true;
-          break;
-        }
+    try {
+      // Parse URL
+      const urlInfo = parseUrl(tab.url);
+      if (!urlInfo.valid) {
+        showError('Not a valid URL');
+        return;
       }
+      
+      currentUrl = tab.url;
+      currentHostname = urlInfo.hostname;
+      currentPath = urlInfo.path;
+      currentProtocol = urlInfo.protocol;
+      
+      // Load settings
+      loadSettings();
+      
+      // Add event listeners
+      addEventListeners();
+    } catch (error) {
+      showError('Error parsing URL: ' + error.message);
     }
+  });
+}
+
+/**
+ * Load settings from storage
+ */
+function loadSettings() {
+  getSettings((settings) => {
+    currentSettings = settings;
     
-    // If we already have an exact match, no need to check for wildcard matches
-    if (exactMatch) {
-      return projects;
-    }
+    // Auto-add domain if it matches a wildcard pattern
+    settings.projects = autoAddDomainIfMatchesWildcard(currentHostname, settings.projects);
     
-    // Extract wildcard portion from domain
-    function extractWildcardPortion(fullDomain, wildcardPattern) {
-      // If pattern is *-something.com, extract the part that matches *
-      if (wildcardPattern.startsWith('*')) {
-        const suffix = wildcardPattern.substring(1); // Remove the '*'
-        if (fullDomain.endsWith(suffix)) {
-          return fullDomain.substring(0, fullDomain.length - suffix.length);
-        }
-      }
-      // If pattern is something.*.com, more complex logic would be needed
-      // For now returning full domain as fallback
-      return fullDomain;
-    }
-    
-    // Check for wildcard matches
-    let projectsUpdated = false;
-    
-    for (const project of projects) {
+    // Find current project
+    currentProject = null;
+    for (const project of settings.projects) {
       if (project.domains) {
+        // Check each domain pattern in the project
         for (const domainEntry of project.domains) {
           const domain = getDomainValue(domainEntry);
-          
-          // Skip non-wildcard domains
-          if (!domain.includes('*')) {
-            continue;
-          }
-          
-          if (matchesDomain(currentHostname, domain)) {
-            // Extract the portion that matches the wildcard
-            const wildcardPortion = extractWildcardPortion(currentHostname, domain);
-            
-            // Add the current domain to this project with the extracted portion as label
-            project.domains.push({
-              domain: currentHostname,
-              label: wildcardPortion // Use the extracted portion as the label
-            });
-            
-            projectsUpdated = true;
+          if (domain === currentHostname || matchesDomain(currentHostname, domain)) {
+            currentProject = project;
             break;
           }
         }
-        
-        if (projectsUpdated) {
-          break;
-        }
+        if (currentProject) break; // Exit the outer loop if project found
       }
     }
     
-    // If we added a domain, save the updated projects list
-    if (projectsUpdated) {
-      chrome.storage.sync.set({ projects: projects }, function() {
-        console.log('Updated projects with auto-added domain:', currentHostname);
-      });
+    // Update UI
+    updateUI(settings);
+  });
+}
+
+/**
+ * Update UI with current settings
+ * @param {Object} settings - Current settings
+ */
+function updateUI(settings) {
+  // Update project name
+  if (currentProject) {
+    projectNameElement.textContent = currentProject.name;
+    updateToggleButton();
+  } else {
+    projectNameElement.textContent = "None (Unknown Domain)";
+    toggleFloatingButton.classList.add('env-switcher__toggle-btn--disabled');
+    toggleFloatingButton.disabled = true;
+  }
+  
+  // Update checkbox states
+  autoRedirectCheckbox.checked = settings.autoRedirect;
+  newWindowCheckbox.checked = settings.newWindow;
+  incognitoCheckbox.checked = settings.incognitoMode;
+  
+  // Update domain options
+  updateDomainOptions();
+  
+  // Update protocol options
+  if (protocolSelect) {
+    const httpOption = document.createElement('option');
+    httpOption.value = 'http:';
+    httpOption.textContent = 'HTTP';
+    httpOption.selected = currentProtocol === 'http:';
+    
+    const httpsOption = document.createElement('option');
+    httpsOption.value = 'https:';
+    httpsOption.textContent = 'HTTPS';
+    httpsOption.selected = currentProtocol === 'https:';
+    
+    protocolSelect.innerHTML = '';
+    protocolSelect.appendChild(httpOption);
+    protocolSelect.appendChild(httpsOption);
+  }
+  
+  // Show/hide go button based on auto-redirect setting
+  if (goButton) {
+    goButton.style.display = settings.autoRedirect ? 'none' : 'block';
+  }
+}
+
+/**
+ * Update domain options
+ */
+function updateDomainOptions() {
+  if (!domainSelect) return;
+  
+  // Clear existing options
+  domainSelect.innerHTML = '';
+  
+  if (!currentProject) return;
+  
+  // Add domain options
+  for (const domainEntry of currentProject.domains) {
+    const domain = getDomainValue(domainEntry);
+    const label = typeof domainEntry === 'string' ? domain : (domainEntry.label || domain);
+    
+    const option = document.createElement('option');
+    option.value = domain;
+    option.textContent = label;
+    option.selected = domain === currentHostname;
+    
+    domainSelect.appendChild(option);
+  }
+}
+
+/**
+ * Update toggle button based on project state
+ */
+function updateToggleButton() {
+  // Remove all state classes
+  toggleFloatingButton.classList.remove('env-switcher__toggle-btn--hide', 'env-switcher__toggle-btn--disabled');
+  
+  if (currentProject) {
+    const isEnabled = currentProject.floatingEnabled === true;
+    toggleFloatingButton.textContent = isEnabled ? 'Hide Floating UI' : 'Show Floating UI';
+    
+    if (isEnabled) {
+      toggleFloatingButton.classList.add('env-switcher__toggle-btn--hide');
     }
     
+    toggleFloatingButton.disabled = false;
+  } else {
+    // No project found, disable the button
+    toggleFloatingButton.textContent = 'Show Floating UI';
+    toggleFloatingButton.classList.add('env-switcher__toggle-btn--disabled');
+    toggleFloatingButton.disabled = true;
+  }
+}
+
+/**
+ * Auto-add domain if it matches a wildcard pattern
+ * @param {string} hostname - The hostname to check
+ * @param {Array} projects - Projects array
+ * @returns {Array} - Updated projects array
+ */
+function autoAddDomainIfMatchesWildcard(hostname, projects) {
+  // First check if the domain is already in any project
+  let exactMatch = false;
+  
+  for (const project of projects) {
+    if (project.domains) {
+      const hasExactMatch = project.domains.some(entry => {
+        const domainValue = getDomainValue(entry);
+        return domainValue === hostname;
+      });
+      
+      if (hasExactMatch) {
+        exactMatch = true;
+        break;
+      }
+    }
+  }
+  
+  // If we already have an exact match, no need to check for wildcard matches
+  if (exactMatch) {
     return projects;
   }
   
-  // Update the toggle button text based on current project's floating UI state
-  function updateToggleButton() {
-    // Remove all state classes first
-    toggleFloatingButton.classList.remove('env-switcher__toggle-btn--hide', 'env-switcher__toggle-btn--disabled');
-    
-    if (currentProject) {
-      const isEnabled = currentProject.floatingEnabled === true;
-      toggleFloatingButton.textContent = isEnabled ? 'Hide Floating UI' : 'Show Floating UI';
-      
-      if (isEnabled) {
-        toggleFloatingButton.classList.add('env-switcher__toggle-btn--hide');
+  // Check for wildcard matches
+  let projectsUpdated = false;
+  
+  for (const project of projects) {
+    if (project.domains) {
+      for (const domainEntry of project.domains) {
+        const domain = getDomainValue(domainEntry);
+        
+        // Skip non-wildcard domains
+        if (!domain.includes('*')) {
+          continue;
+        }
+        
+        if (matchesDomain(hostname, domain)) {
+          // Extract the portion that matches the wildcard
+          const wildcardPortion = extractWildcardPortion(hostname, domain);
+          
+          // Add the current domain to this project with the extracted portion as label
+          project.domains.push({
+            domain: hostname,
+            label: wildcardPortion
+          });
+          
+          projectsUpdated = true;
+          break;
+        }
       }
       
-      toggleFloatingButton.disabled = false;
-    } else {
-      // No project found, disable the button
-      toggleFloatingButton.textContent = 'Show Floating UI';
-      toggleFloatingButton.classList.add('env-switcher__toggle-btn--disabled');
-      toggleFloatingButton.disabled = true;
+      if (projectsUpdated) {
+        break;
+      }
     }
   }
   
-  // Load settings
-  function loadSettings() {
-    chrome.storage.sync.get('projects', function(data) {
-      let projects = data.projects || [];
-      
-      // Auto-add current domain if it matches a wildcard pattern
-      if (currentHostname) {
-        projects = autoAddDomainIfMatchesWildcard(currentHostname, projects);
-      }
-      
-      // Find current project
-      currentProject = null;
-      for (const project of projects) {
-        if (project.domains) {
-          // Check each domain pattern in the project
-          for (const domainEntry of project.domains) {
-            const domain = getDomainValue(domainEntry);
-            if (domain === currentHostname || matchesDomain(currentHostname, domain)) {
-              currentProject = project;
-              break;
-            }
-          }
-          if (currentProject) break; // Exit the outer loop if project found
-        }
-      }
-      
-      if (currentProject) {
-        // Update UI with current project
-        projectNameElement.textContent = currentProject.name;
-        updateToggleButton();
-      } else {
-        // No project found for this domain
-        projectNameElement.textContent = "None (Unknown Domain)";
-        toggleFloatingButton.classList.add('env-switcher__toggle-btn--disabled');
-        toggleFloatingButton.disabled = true;
-      }
-    });
+  // If we added a domain, save the updated projects list
+  if (projectsUpdated) {
+    saveSetting(STORAGE_KEYS.PROJECTS, projects);
   }
   
-  // Initialize the extension
-  function init() {
-    // Get current tab information
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-      if (tabs && tabs.length > 0) {
-        const tab = tabs[0];
-        
-        try {
-          // Parse the current URL
-          const urlObj = new URL(tab.url);
-          currentHostname = urlObj.hostname;
-          
-          if (currentHostname) {
-            // Now load settings and find the current project
-            loadSettings();
-          } else {
-            projectNameElement.textContent = "Not available";
-            toggleFloatingButton.classList.add('env-switcher__toggle-btn--disabled');
-            toggleFloatingButton.disabled = true;
-          }
-        } catch (e) {
-          console.error("Error parsing URL:", e);
-          projectNameElement.textContent = "Error";
-          toggleFloatingButton.classList.add('env-switcher__toggle-btn--disabled');
-          toggleFloatingButton.disabled = true;
-        }
-      }
-    });
+  return projects;
+}
+
+/**
+ * Extract wildcard portion from domain
+ * @param {string} fullDomain - Full domain
+ * @param {string} wildcardPattern - Wildcard pattern
+ * @returns {string} - Extracted portion
+ */
+function extractWildcardPortion(fullDomain, wildcardPattern) {
+  // If pattern is *-something.com, extract the part that matches *
+  if (wildcardPattern.startsWith('*')) {
+    const suffix = wildcardPattern.substring(1); // Remove the '*'
+    if (fullDomain.endsWith(suffix)) {
+      return fullDomain.substring(0, fullDomain.length - suffix.length);
+    }
   }
-  
-  // Toggle floating UI button click handler
-  toggleFloatingButton.addEventListener('click', function() {
-    if (currentProject) {
-      // Toggle the enabled state
+  // For other patterns, fall back to the full domain
+  return fullDomain;
+}
+
+/**
+ * Add event listeners to UI elements
+ */
+function addEventListeners() {
+  // Toggle floating UI button
+  if (toggleFloatingButton) {
+    toggleFloatingButton.addEventListener('click', () => {
+      if (!currentProject) return;
+      
       const newState = !currentProject.floatingEnabled;
       
-      // Update UI
+      // Send message to content script
+      toggleFloatingUI(currentProject.name, newState);
+      
+      // Update UI optimistically
       currentProject.floatingEnabled = newState;
       updateToggleButton();
-      
-      // Send message to content script to toggle UI
-      chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-        if (tabs && tabs.length > 0) {
-          chrome.tabs.sendMessage(tabs[0].id, {
-            action: 'toggleFloatingUI',
-            enabled: newState,
-            projectName: currentProject.name
-          }, function(response) {
-            console.log('Response from content script:', response);
-          });
-        }
-      });
-      
-      // Save to storage
-      chrome.storage.sync.get('projects', function(data) {
-        let projects = data.projects || [];
-        
-        // Find the project index
-        const projectIndex = projects.findIndex(p => p.name === currentProject.name);
-        
-        if (projectIndex !== -1) {
-          // Update the project
-          projects[projectIndex].floatingEnabled = newState;
-          
-          // Save back to storage
-          chrome.storage.sync.set({ projects: projects }, function() {
-            console.log('Project updated:', currentProject.name, 'floatingEnabled =', newState);
-          });
-        }
-      });
-    }
-  });
+    });
+  }
   
-  // Configure button click handler
-  configureButton.addEventListener('click', function() {
-    chrome.runtime.openOptionsPage();
-  });
+  // Configure button
+  if (configureButton) {
+    configureButton.addEventListener('click', () => {
+      chrome.runtime.openOptionsPage();
+    });
+  }
   
-  // Initialize
-  init();
-});
+  // Domain select
+  if (domainSelect) {
+    domainSelect.addEventListener('change', () => {
+      if (currentSettings.autoRedirect) {
+        navigateToSelectedDomain();
+      }
+    });
+  }
+  
+  // Protocol select
+  if (protocolSelect) {
+    protocolSelect.addEventListener('change', () => {
+      if (currentSettings.autoRedirect) {
+        navigateToSelectedDomain();
+      }
+    });
+  }
+  
+  // Go button
+  if (goButton) {
+    goButton.addEventListener('click', () => {
+      navigateToSelectedDomain();
+    });
+  }
+  
+  // Auto-redirect checkbox
+  if (autoRedirectCheckbox) {
+    autoRedirectCheckbox.addEventListener('change', () => {
+      currentSettings.autoRedirect = autoRedirectCheckbox.checked;
+      saveSetting(STORAGE_KEYS.AUTO_REDIRECT, autoRedirectCheckbox.checked);
+      
+      // Show/hide go button
+      if (goButton) {
+        goButton.style.display = autoRedirectCheckbox.checked ? 'none' : 'block';
+      }
+    });
+  }
+  
+  // New window checkbox
+  if (newWindowCheckbox) {
+    newWindowCheckbox.addEventListener('change', () => {
+      currentSettings.newWindow = newWindowCheckbox.checked;
+      saveSetting(STORAGE_KEYS.NEW_WINDOW, newWindowCheckbox.checked);
+    });
+  }
+  
+  // Incognito checkbox
+  if (incognitoCheckbox) {
+    incognitoCheckbox.addEventListener('change', () => {
+      currentSettings.incognitoMode = incognitoCheckbox.checked;
+      saveSetting(STORAGE_KEYS.INCOGNITO_MODE, incognitoCheckbox.checked);
+    });
+  }
+  
+  // Copy path button
+  if (copyPathButton) {
+    copyPathButton.addEventListener('click', () => {
+      copyToClipboard(
+        currentPath,
+        () => showToast('Path copied to clipboard'),
+        () => showToast('Failed to copy path')
+      );
+    });
+  }
+  
+  // Copy URL button
+  if (copyUrlButton) {
+    copyUrlButton.addEventListener('click', () => {
+      copyToClipboard(
+        currentUrl,
+        () => showToast('URL copied to clipboard'),
+        () => showToast('Failed to copy URL')
+      );
+    });
+  }
+}
 
-})(); 
+/**
+ * Navigate to selected domain
+ */
+function navigateToSelectedDomain() {
+  if (!domainSelect) return;
+  
+  const domain = domainSelect.value;
+  const protocol = protocolSelect ? protocolSelect.value : currentProtocol;
+  
+  // Build URL
+  let url = `${protocol}//${domain}${currentPath}`;
+  
+  // Navigate
+  navigateTo(url, currentSettings.newWindow, currentSettings.incognitoMode);
+}
+
+/**
+ * Show error message
+ * @param {string} message - Error message
+ */
+function showError(message) {
+  const errorElement = document.createElement('div');
+  errorElement.className = 'env-switcher__error';
+  errorElement.textContent = message;
+  
+  // Replace content with error message
+  document.body.innerHTML = '';
+  document.body.appendChild(errorElement);
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', init); 

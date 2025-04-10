@@ -23,13 +23,14 @@
     }
   },
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["shared.js", "content.js"],
-      "css": ["content.css"],
+      "js": ["content.js"],
+      "css": ["styles/content.css"],
       "run_at": "document_idle"
     }
   ],
@@ -42,7 +43,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["floating-ui.css"],
+      "resources": ["styles/floating-ui.css", "styles/variables.css"],
       "matches": ["<all_urls>"]
     }
   ]

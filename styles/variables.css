@@ -1,0 +1,50 @@
+/**
+ * CSS Variables for Environment Switcher
+ */
+
+:root {
+  /* Colors */
+  --env-switcher-primary: #4285f4;
+  --env-switcher-primary-dark: #3367d6;
+  --env-switcher-secondary: #34a853;
+  --env-switcher-danger: #ea4335;
+  --env-switcher-warning: #fbbc05;
+  --env-switcher-light: #f8f9fa;
+  --env-switcher-dark: #202124;
+  --env-switcher-gray: #5f6368;
+  --env-switcher-gray-light: #dadce0;
+  --env-switcher-border: #dadce0;
+  
+  /* Typography */
+  --env-switcher-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+  --env-switcher-font-size-small: 0.8rem;
+  --env-switcher-font-size-normal: 1rem;
+  --env-switcher-font-size-large: 1.2rem;
+  
+  /* Spacing */
+  --env-switcher-spacing-xs: 4px;
+  --env-switcher-spacing-sm: 8px;
+  --env-switcher-spacing-md: 16px;
+  --env-switcher-spacing-lg: 24px;
+  --env-switcher-spacing-xl: 32px;
+  
+  /* Border radius */
+  --env-switcher-border-radius: 4px;
+  --env-switcher-border-radius-lg: 8px;
+  --env-switcher-border-radius-round: 50%;
+  
+  /* Z-index layers */
+  --env-switcher-z-index-floating: 9999;
+  --env-switcher-z-index-modal: 10000;
+  --env-switcher-z-index-toast: 10001;
+  
+  /* Shadows */
+  --env-switcher-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+  --env-switcher-shadow-md: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+  --env-switcher-shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+  
+  /* Transitions */
+  --env-switcher-transition-fast: 0.15s ease;
+  --env-switcher-transition-normal: 0.3s ease;
+  --env-switcher-transition-slow: 0.5s ease;
+} 

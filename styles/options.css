@@ -1,0 +1,294 @@
+/**
+ * Options CSS for Environment Switcher
+ */
+
+@import url('variables.css');
+
+/* Reset */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--env-switcher-font-family);
+  font-size: var(--env-switcher-font-size-normal);
+  color: var(--env-switcher-dark);
+  background-color: #f8f9fa;
+  padding: var(--env-switcher-spacing-md);
+  line-height: 1.5;
+}
+
+/* Main container */
+.env-switcher-options {
+  max-width: 900px;
+  margin: 0 auto;
+  background-color: white;
+  border-radius: var(--env-switcher-border-radius-lg);
+  box-shadow: var(--env-switcher-shadow-sm);
+  overflow: hidden;
+}
+
+/* Header */
+.env-switcher-options__header {
+  background-color: var(--env-switcher-primary);
+  color: white;
+  padding: var(--env-switcher-spacing-lg);
+  text-align: center;
+}
+
+.env-switcher-options__header h1 {
+  font-size: 1.8rem;
+  margin-bottom: var(--env-switcher-spacing-sm);
+}
+
+.env-switcher-options__header p {
+  opacity: 0.8;
+}
+
+/* Content */
+.env-switcher-options__content {
+  padding: var(--env-switcher-spacing-lg);
+}
+
+/* Sections */
+.env-switcher-options__section {
+  margin-bottom: var(--env-switcher-spacing-xl);
+  border-bottom: 1px solid var(--env-switcher-gray-light);
+  padding-bottom: var(--env-switcher-spacing-lg);
+}
+
+.env-switcher-options__section:last-child {
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.env-switcher-options__section h2 {
+  margin-bottom: var(--env-switcher-spacing-md);
+  font-size: 1.3rem;
+  color: var(--env-switcher-primary);
+}
+
+/* Help text */
+.env-switcher-options__help {
+  margin-bottom: var(--env-switcher-spacing-md);
+  font-size: var(--env-switcher-font-size-small);
+  color: var(--env-switcher-gray);
+}
+
+.env-switcher-options__help code {
+  background-color: var(--env-switcher-light);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+/* Projects */
+.env-switcher-options__projects {
+  margin-bottom: var(--env-switcher-spacing-md);
+}
+
+.project-item {
+  margin-bottom: var(--env-switcher-spacing-md);
+  padding: var(--env-switcher-spacing-md);
+  background-color: var(--env-switcher-light);
+  border-radius: var(--env-switcher-border-radius);
+  border: 1px solid var(--env-switcher-border);
+}
+
+.project-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--env-switcher-spacing-md);
+}
+
+.project-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.project-controls {
+  display: flex;
+  gap: var(--env-switcher-spacing-sm);
+}
+
+.project-settings {
+  margin-bottom: var(--env-switcher-spacing-md);
+}
+
+.domain-header {
+  margin-top: var(--env-switcher-spacing-md);
+  margin-bottom: var(--env-switcher-spacing-sm);
+  font-size: 1rem;
+}
+
+.domain-list {
+  margin-bottom: var(--env-switcher-spacing-md);
+}
+
+.domain-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--env-switcher-spacing-sm);
+  border-bottom: 1px solid var(--env-switcher-border);
+}
+
+.domain-item:last-child {
+  border-bottom: none;
+}
+
+/* Add project form */
+.env-switcher-options__add-project {
+  display: flex;
+  gap: var(--env-switcher-spacing-sm);
+  margin-top: var(--env-switcher-spacing-md);
+}
+
+.env-switcher-options__add-project input {
+  flex: 1;
+  padding: var(--env-switcher-spacing-sm);
+  border: 1px solid var(--env-switcher-border);
+  border-radius: var(--env-switcher-border-radius);
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* Protocol rules */
+.env-switcher-options__rules {
+  width: 100%;
+  padding: var(--env-switcher-spacing-sm);
+  border: 1px solid var(--env-switcher-border);
+  border-radius: var(--env-switcher-border-radius);
+  font-family: monospace;
+  font-size: var(--env-switcher-font-size-normal);
+  resize: vertical;
+  min-height: 100px;
+}
+
+/* Settings */
+.env-switcher-options__setting {
+  margin-bottom: var(--env-switcher-spacing-sm);
+  display: flex;
+  align-items: center;
+}
+
+.env-switcher-options__setting input[type="checkbox"] {
+  margin-right: var(--env-switcher-spacing-sm);
+}
+
+/* Footer */
+.env-switcher-options__footer {
+  background-color: var(--env-switcher-light);
+  padding: var(--env-switcher-spacing-md);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--env-switcher-spacing-sm);
+  border-top: 1px solid var(--env-switcher-border);
+}
+
+/* Buttons */
+.env-switcher-options__button,
+.project-controls button,
+.env-switcher-options__add-project button,
+.domain-edit-button,
+.remove-button {
+  padding: var(--env-switcher-spacing-sm) var(--env-switcher-spacing-md);
+  border-radius: var(--env-switcher-border-radius);
+  border: 1px solid var(--env-switcher-border);
+  background-color: var(--env-switcher-light);
+  color: var(--env-switcher-dark);
+  font-family: inherit;
+  font-size: var(--env-switcher-font-size-small);
+  cursor: pointer;
+  transition: background-color var(--env-switcher-transition-fast);
+}
+
+.env-switcher-options__button:hover,
+.project-controls button:hover,
+.env-switcher-options__add-project button:hover,
+.domain-edit-button:hover,
+.remove-button:hover {
+  background-color: var(--env-switcher-gray-light);
+}
+
+.env-switcher-options__button--primary {
+  background-color: var(--env-switcher-primary);
+  color: white;
+  border-color: var(--env-switcher-primary-dark);
+}
+
+.env-switcher-options__button--primary:hover {
+  background-color: var(--env-switcher-primary-dark);
+}
+
+.env-switcher-options__button--danger {
+  background-color: var(--env-switcher-danger);
+  color: white;
+  border-color: var(--env-switcher-danger);
+}
+
+.env-switcher-options__button--danger:hover {
+  opacity: 0.9;
+}
+
+/* Dialogs */
+.env-switcher-options__dialog-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--env-switcher-z-index-modal);
+}
+
+.env-switcher-options__dialog {
+  background-color: white;
+  border-radius: var(--env-switcher-border-radius-lg);
+  padding: var(--env-switcher-spacing-lg);
+  width: 90%;
+  max-width: 500px;
+  box-shadow: var(--env-switcher-shadow-lg);
+}
+
+.env-switcher-options__dialog-title {
+  margin-bottom: var(--env-switcher-spacing-md);
+  font-size: 1.2rem;
+}
+
+.env-switcher-options__dialog-field {
+  margin-bottom: var(--env-switcher-spacing-md);
+}
+
+.env-switcher-options__dialog-field label {
+  display: block;
+  margin-bottom: var(--env-switcher-spacing-xs);
+  font-size: var(--env-switcher-font-size-small);
+  color: var(--env-switcher-gray);
+}
+
+.env-switcher-options__dialog-field input {
+  width: 100%;
+  padding: var(--env-switcher-spacing-sm);
+  border: 1px solid var(--env-switcher-border);
+  border-radius: var(--env-switcher-border-radius);
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.env-switcher-options__dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--env-switcher-spacing-sm);
+}
+
+.hidden {
+  display: none !important;
+} 

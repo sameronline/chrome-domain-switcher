@@ -69,3 +69,56 @@ No data is sent to remote servers; all settings are stored locally in your brows
 ## License
 
 MIT 
+
+## Code Structure
+
+The extension has been completely refactored with a modular, well-organized structure:
+
+```
+chrome-env-switcher/
+├── manifest.json          # Extension manifest
+├── background.js          # Background script (service worker)
+├── content.js             # Content script injected into pages
+├── popup.js               # Popup script
+├── popup.html             # Popup HTML
+├── options.js             # Options page script
+├── options.html           # Options page HTML
+├── components/            # UI components
+│   └── FloatingUI.js      # Floating UI component
+├── services/              # Service modules
+│   ├── storageService.js  # Storage operations
+│   └── navigationService.js # Navigation and URL handling
+├── styles/                # CSS styles
+│   ├── variables.css      # CSS variables and design system
+│   ├── content.css        # Content script styles
+│   ├── popup.css          # Popup styles
+│   ├── options.css        # Options page styles
+│   └── floating-ui.css    # Floating UI styles
+├── utils/                 # Utility functions
+│   ├── domainUtils.js     # Domain-related functions
+│   └── uiUtils.js         # UI-related functions
+└── icons/                 # Extension icons
+```
+
+### Key Improvements
+
+1. **Modular Architecture**: Code separated into logical modules with clear responsibilities
+2. **ES Modules**: Uses ES modules for better code organization and dependency management
+3. **CSS Variables**: Consistent design system with CSS variables
+4. **No Global Pollution**: All code is properly scoped to avoid global pollution
+5. **Reusable Components**: UI components are reusable and self-contained
+6. **Clean APIs**: Clean and consistent APIs for services and utilities
+
+## Development
+
+To modify or extend this extension:
+
+1. Clone the repository
+2. Make changes to the relevant modules
+3. Load the extension in Chrome using "Load unpacked" in developer mode
+
+### Adding New Features
+
+- **New UI Component**: Add a new file in the `components/` directory
+- **New Service**: Add a new file in the `services/` directory
+- **New Utility**: Add a new file in the `utils/` directory 

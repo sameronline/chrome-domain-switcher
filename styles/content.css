@@ -1,0 +1,49 @@
+/**
+ * Content styles for Environment Switcher
+ */
+
+@import url('variables.css');
+
+/* Toast notification styles */
+.env-switcher-toast-container {
+  position: fixed;
+  bottom: var(--env-switcher-spacing-lg);
+  right: var(--env-switcher-spacing-lg);
+  z-index: var(--env-switcher-z-index-toast);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--env-switcher-spacing-sm);
+}
+
+.env-switcher-toast {
+  background-color: var(--env-switcher-dark);
+  color: white;
+  padding: var(--env-switcher-spacing-sm) var(--env-switcher-spacing-md);
+  border-radius: var(--env-switcher-border-radius);
+  font-family: var(--env-switcher-font-family);
+  font-size: var(--env-switcher-font-size-small);
+  box-shadow: var(--env-switcher-shadow-sm);
+  opacity: 0;
+  transform: translateY(10px);
+  animation: env-switcher-toast-appear var(--env-switcher-transition-normal) forwards;
+}
+
+@keyframes env-switcher-toast-appear {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Error message */
+.env-switcher-error {
+  background-color: var(--env-switcher-danger);
+  color: white;
+  padding: var(--env-switcher-spacing-md);
+  border-radius: var(--env-switcher-border-radius);
+  font-family: var(--env-switcher-font-family);
+  font-size: var(--env-switcher-font-size-normal);
+  box-shadow: var(--env-switcher-shadow-sm);
+  margin: var(--env-switcher-spacing-md);
+} 

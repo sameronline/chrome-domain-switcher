@@ -2,36 +2,67 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Environment Switcher</title>
-  <link rel="stylesheet" href="popup.css">
+  <link rel="stylesheet" href="styles/popup.css">
 </head>
 <body>
   <div class="env-switcher">
     <div class="env-switcher__header">
-      <h2>Environment Switcher</h2>
-    </div>
-    
-    <!-- Current Project Display -->
-    <div class="env-switcher__row">
-      <div id="current-project" class="env-switcher__project-display">
-        Current Project: <span id="project-name">Loading...</span>
+      <h1 class="env-switcher__title">Environment Switcher</h1>
+      <div class="env-switcher__project">
+        <span class="env-switcher__project-label">Project:</span>
+        <span id="project-name" class="env-switcher__project-name">Loading...</span>
       </div>
     </div>
     
-    <!-- Toggle Floating UI Button -->
-    <div class="env-switcher__row">
-      <button id="toggle-floating" class="env-switcher__toggle-btn">Show Floating UI</button>
-    </div>
-    
-    <!-- Options link -->
-    <div class="env-switcher__footer">
-      <a href="#" id="configure-btn" class="env-switcher__config-link">Configure Projects & Settings</a>
+    <div class="env-switcher__content">
+      <div class="env-switcher__field">
+        <label for="domain-select">Environment:</label>
+        <select id="domain-select" class="env-switcher__select"></select>
+      </div>
+      
+      <div class="env-switcher__field">
+        <label for="protocol-select">Protocol:</label>
+        <select id="protocol-select" class="env-switcher__select">
+          <option value="http:">HTTP</option>
+          <option value="https:" selected>HTTPS</option>
+        </select>
+      </div>
+      
+      <div class="env-switcher__actions">
+        <button id="go-button" class="env-switcher__btn env-switcher__btn--primary">Go</button>
+      </div>
+      
+      <div class="env-switcher__options">
+        <div class="env-switcher__checkbox-group">
+          <input type="checkbox" id="auto-redirect" checked>
+          <label for="auto-redirect">Auto-redirect</label>
+        </div>
+        
+        <div class="env-switcher__checkbox-group">
+          <input type="checkbox" id="new-window">
+          <label for="new-window">New window</label>
+        </div>
+        
+        <div class="env-switcher__checkbox-group">
+          <input type="checkbox" id="incognito-mode">
+          <label for="incognito-mode">Incognito</label>
+        </div>
+      </div>
+      
+      <div class="env-switcher__tools">
+        <button id="copy-path" class="env-switcher__btn">Copy Path</button>
+        <button id="copy-url" class="env-switcher__btn">Copy URL</button>
+      </div>
+      
+      <div class="env-switcher__footer">
+        <button id="toggle-floating" class="env-switcher__btn env-switcher__toggle-btn">Show Floating UI</button>
+        <button id="configure-btn" class="env-switcher__btn">Configure Domains</button>
+      </div>
     </div>
   </div>
   
-  <!-- Load shared functionality first -->
-  <script src="shared.js"></script>
-  <!-- Then load the popup-specific code -->
-  <script src="popup.js"></script>
+  <script type="module" src="popup.js"></script>
 </body>
 </html> 
