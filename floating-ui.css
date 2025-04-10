@@ -14,6 +14,13 @@
   max-width: 100%;
   width: auto;
   height: auto;
+  /* Isolate CSS to avoid affecting other elements */
+  all: initial;
+  * {
+    all: revert;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
 }
 
 .env-switcher-floating__content {

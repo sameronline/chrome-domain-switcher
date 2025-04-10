@@ -60,7 +60,7 @@ class EnvSwitcherUI {
     this.newWindowCheckbox = null;
     this.toolsContainer = null;
     
-    // Load settings and initialize if relevant project is enabled
+    // Load settings and initialize only if relevant project is enabled
     this.loadSettings();
   }
   
@@ -99,10 +99,13 @@ class EnvSwitcherUI {
         // Find the current project for this domain
         this.findCurrentProject();
         
-        // Initialize the UI if a project is found
-        if (this.currentProject && this.currentProject.floatingEnabled) {
+        // Initialize the UI if a project is found AND floating UI is enabled for that project
+        // Only add elements to the DOM if the project exists and has floatingEnabled set to true
+        if (this.currentProject && this.currentProject.floatingEnabled === true) {
           this.enabled = true;
           this.initialize();
+        } else {
+          console.log('Floating UI not enabled for this project or no matching project found.');
         }
       });
     } catch (e) {
@@ -112,6 +115,9 @@ class EnvSwitcherUI {
   
   // Initialize the floating UI
   initialize() {
+    // Load the CSS dynamically only when needed
+    this.loadFloatingUiCSS();
+    
     // Build the UI
     this.buildUI();
     
@@ -122,6 +128,33 @@ class EnvSwitcherUI {
     
     // Add to the DOM
     this.appendToDOM();
+  }
+  
+  // Dynamically load the floating UI CSS
+  loadFloatingUiCSS() {
+    // Check if the stylesheet is already loaded
+    if (document.querySelector('link[href*="floating-ui.css"]')) {
+      return;
+    }
+    
+    // Create link element
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.id = 'env-switcher-floating-ui-css';
+    link.href = chrome.runtime.getURL('floating-ui.css');
+    
+    // Append to head
+    document.head.appendChild(link);
+    console.log('Loaded floating UI CSS dynamically');
+  }
+  
+  // Remove the floating UI CSS
+  removeFloatingUiCSS() {
+    const cssLink = document.querySelector('link[href*="floating-ui.css"]');
+    if (cssLink && cssLink.parentNode) {
+      cssLink.parentNode.removeChild(cssLink);
+      console.log('Removed floating UI CSS');
+    }
   }
   
   // Find which project the current domain belongs to
@@ -607,78 +640,106 @@ class EnvSwitcherUI {
     }
   }
   
-  // Destroy the UI
+  /**
+   * Removes the floating UI from the DOM
+   */
   destroy() {
     if (this.container && this.container.parentNode) {
-      try {
-        this.container.parentNode.removeChild(this.container);
-        console.log('Environment Switcher UI removed from DOM');
-        this.container = null;
-      } catch (e) {
-        console.error('Failed to remove Environment Switcher UI from DOM:', e);
+      // Remove event listeners to prevent memory leaks
+      if (this.toggleButton) {
+        this.toggleButton.removeEventListener('click', this.toggleCollapse.bind(this));
       }
+      
+      if (this.goButton) {
+        this.goButton.removeEventListener('click', this.navigateToSelectedEnvironment.bind(this));
+      }
+      
+      if (this.projectSelect) {
+        this.projectSelect.removeEventListener('change', () => {});
+      }
+      
+      if (this.domainSelect) {
+        this.domainSelect.removeEventListener('change', () => {});
+      }
+      
+      // Remove the element from DOM
+      this.container.parentNode.removeChild(this.container);
+      
+      // Remove the CSS as well
+      this.removeFloatingUiCSS();
+      
+      // Reset all UI element references
+      this.container = null;
+      this.contentWrapper = null;
+      this.projectSelect = null;
+      this.domainSelect = null;
+      this.protocolSelect = null;
+      this.goButton = null;
+      this.toggleButton = null;
+      this.copyPathButton = null;
+      this.copyUrlButton = null;
+      this.autoRedirectCheckbox = null;
+      this.newWindowCheckbox = null;
+      this.toolsContainer = null;
+      
+      console.log('Environment Switcher UI destroyed');
     }
   }
   
   // Enable floating UI for a specific project
   enableForProject(projectName) {
-    // Find the project by name
+    console.log(`Enabling floating UI for project: ${projectName}`);
+    
+    // Find the project
     const project = this.projects.find(p => p.name === projectName);
     
-    if (project) {
-      // Update the project's enabled status in storage
-      project.floatingEnabled = true;
-      
-      // Update current project if it matches
-      if (this.currentProject && this.currentProject.name === projectName) {
-        this.currentProject.floatingEnabled = true;
-        this.enabled = true;
-        
-        // If UI already exists, show it
-        if (this.container) {
-          this.show();
-        } else {
-          // Otherwise initialize it
-          this.initialize();
-        }
-      }
-      
-      // Save the updated projects to storage
-      EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.PROJECTS, this.projects, () => {
-        console.log(`Floating UI enabled for project: ${projectName}`);
-      });
-    } else {
-      console.log(`Project not found: ${projectName}`);
+    if (!project) {
+      console.log(`Project ${projectName} not found`);
+      return;
     }
+    
+    // Update project setting
+    project.floatingEnabled = true;
+    
+    // If this is the current project and UI doesn't exist, initialize it
+    if (this.currentProject && this.currentProject.name === projectName) {
+      // Only create and add UI elements if they don't already exist
+      if (!this.container) {
+        this.enabled = true;
+        this.initialize();
+      } else {
+        // If UI exists but is hidden, show it
+        this.show();
+      }
+    }
+    
+    // Save setting
+    EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.PROJECTS, this.projects);
   }
   
   // Disable floating UI for a specific project
   disableForProject(projectName) {
-    // Find the project by name
+    console.log(`Disabling floating UI for project: ${projectName}`);
+    
+    // Find the project
     const project = this.projects.find(p => p.name === projectName);
     
-    if (project) {
-      // Update the project's enabled status in storage
-      project.floatingEnabled = false;
-      
-      // Update current project if it matches
-      if (this.currentProject && this.currentProject.name === projectName) {
-        this.currentProject.floatingEnabled = false;
-        this.enabled = false;
-        
-        // If UI exists, hide it
-        if (this.container) {
-          this.hide();
-        }
-      }
-      
-      // Save the updated projects to storage
-      EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.PROJECTS, this.projects, () => {
-        console.log(`Floating UI disabled for project: ${projectName}`);
-      });
-    } else {
-      console.log(`Project not found: ${projectName}`);
+    if (!project) {
+      console.log(`Project ${projectName} not found`);
+      return;
     }
+    
+    // Update project setting
+    project.floatingEnabled = false;
+    
+    // If this is the current project, remove UI
+    if (this.currentProject && this.currentProject.name === projectName) {
+      this.enabled = false;
+      this.destroy();
+    }
+    
+    // Save setting
+    EnvSwitcher.saveSetting(EnvSwitcher.storage.keys.PROJECTS, this.projects);
   }
   
   // Helper method to show a toast notification
@@ -887,7 +948,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// Function to ensure the UI is initialized
+// Function to ensure the UI is initialized only when needed
 function initializeUI() {
   if (!envSwitcherUI) {
     console.log('Initializing Environment Switcher UI');
@@ -895,7 +956,7 @@ function initializeUI() {
   }
 }
 
-// Initialize on page load - with both DOMContentLoaded and window load events to ensure it runs
+// Initialize on page load
 document.addEventListener('DOMContentLoaded', initializeUI);
 
 // Backup initialization in case DOMContentLoaded already fired
