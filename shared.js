@@ -10,7 +10,8 @@ const Storage = {
     INCOGNITO_MODE: 'incognitoMode',
     COLLAPSED_STATE: 'collapsedState',
     SHOW_PROTOCOL: 'showProtocol',
-    AUTO_COLLAPSE: 'autoCollapse'
+    AUTO_COLLAPSE: 'autoCollapse',
+    TOOLS: 'tools'
   },
   defaults: {
     projects: [
@@ -21,7 +22,8 @@ const Storage = {
           { domain: "stage.example.com", label: "Staging" },
           { domain: "www.example.com", label: "Production" }
         ],
-        floatingEnabled: false
+        floatingEnabled: false,
+        tools: []
       }
     ],
     protocolRules: [

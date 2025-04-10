@@ -137,6 +137,66 @@
   color: var(--text-color, #333);
 }
 
+/* Tools section styles */
+.env-switcher-floating__tools {
+  margin-top: 5px;
+  width: 100%;
+}
+
+.env-switcher-floating__separator {
+  border: 0;
+  height: 1px;
+  background-color: var(--border-color, #ddd);
+  margin: 5px 0;
+}
+
+.env-switcher-floating__tools-heading {
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--text-color, #333);
+  margin-bottom: 5px;
+  text-align: center;
+}
+
+.env-switcher-floating__tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(55px, 1fr));
+  gap: 5px;
+  width: 100%;
+}
+
+.env-switcher-floating__tool-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  color: var(--text-color, #333);
+  padding: 5px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.env-switcher-floating__tool-btn:hover {
+  background-color: var(--hover-bg, #f0f0f0);
+}
+
+.env-switcher-floating__tool-icon {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  margin-bottom: 3px;
+}
+
+.env-switcher-floating__tool-label {
+  font-size: 10px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .env-switcher-floating {
@@ -148,6 +208,7 @@
     --primary-color-hover: #2980b9;
     --primary-color-active: #2471a3;
     --secondary-color: #2ecc71;
+    --hover-bg: #333;
   }
   
   .env-switcher-floating__checkbox-container label {

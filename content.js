@@ -58,6 +58,7 @@ class EnvSwitcherUI {
     this.copyUrlButton = null;
     this.autoRedirectCheckbox = null;
     this.newWindowCheckbox = null;
+    this.toolsContainer = null;
     
     // Load settings and initialize if relevant project is enabled
     this.loadSettings();
@@ -85,6 +86,13 @@ class EnvSwitcherUI {
         this.showProtocol = result[EnvSwitcher.storage.keys.SHOW_PROTOCOL];
         this.autoCollapse = result[EnvSwitcher.storage.keys.AUTO_COLLAPSE];
         this.collapsed = result[EnvSwitcher.storage.keys.COLLAPSED_STATE];
+        
+        // Ensure all projects have a tools property
+        this.projects.forEach(project => {
+          if (!project.tools) {
+            project.tools = [];
+          }
+        });
         
         console.log('Settings loaded:', this.projects);
         
@@ -414,15 +422,82 @@ class EnvSwitcherUI {
     
     this.contentWrapper.appendChild(row4);
     
-    // Add elements to container
+    // ROW 5: Tools row (if project has tools)
+    if (this.currentProject.tools && this.currentProject.tools.length > 0) {
+      // Create container for tools
+      this.toolsContainer = document.createElement('div');
+      this.toolsContainer.className = 'env-switcher-floating__tools';
+      
+      // Add separator
+      const separator = document.createElement('hr');
+      separator.className = 'env-switcher-floating__separator';
+      this.toolsContainer.appendChild(separator);
+      
+      // Add heading
+      const toolsHeading = document.createElement('div');
+      toolsHeading.className = 'env-switcher-floating__tools-heading';
+      toolsHeading.textContent = 'Tools';
+      this.toolsContainer.appendChild(toolsHeading);
+      
+      // Create tools grid
+      const toolsGrid = document.createElement('div');
+      toolsGrid.className = 'env-switcher-floating__tools-grid';
+      
+      // Add each tool
+      this.currentProject.tools.forEach(tool => {
+        const toolButton = document.createElement('a');
+        toolButton.className = 'env-switcher-floating__tool-btn';
+        toolButton.href = tool.url;
+        toolButton.target = '_blank';
+        toolButton.title = tool.label;
+        
+        // Create icon element
+        const icon = document.createElement('img');
+        icon.className = 'env-switcher-floating__tool-icon';
+        icon.alt = tool.label;
+        icon.width = 26;
+        icon.height = 26;
+        
+        // Try to get favicon for the domain
+        const domain = this.extractDomainFromUrl(tool.url);
+        icon.src = `https://${domain}/favicon.ico`;
+        
+        // Add fallback in case favicon doesn't load
+        icon.onerror = () => {
+          // Try alternative favicon locations
+          icon.src = `https://${domain}/favicon.png`;
+          
+          icon.onerror = () => {
+            // If all favicon attempts fail, show a generic icon
+            icon.src = `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNiIgaGVpZ2h0PSIyNiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIj48L2NpcmNsZT48bGluZSB4MT0iMTIiIHkxPSI4IiB4Mj0iMTIiIHkyPSIxNiI+PC9saW5lPjxsaW5lIHgxPSI4IiB5MT0iMTIiIHgyPSIxNiIgeTI9IjEyIj48L2xpbmU+PC9zdmc+`;
+            icon.style.filter = 'invert(0.5)';
+          };
+        };
+        
+        toolButton.appendChild(icon);
+        
+        // Add label
+        const label = document.createElement('span');
+        label.className = 'env-switcher-floating__tool-label';
+        label.textContent = tool.label;
+        toolButton.appendChild(label);
+        
+        toolsGrid.appendChild(toolButton);
+      });
+      
+      this.toolsContainer.appendChild(toolsGrid);
+      this.contentWrapper.appendChild(this.toolsContainer);
+    }
+    
+    // Add content to container
     this.container.appendChild(this.toggleButton);
     this.container.appendChild(this.contentWrapper);
     
-    // Add to document
-    document.body.appendChild(this.container);
-    
     // Add event listeners
     this.addEventListeners();
+    
+    // Add to document body
+    this.appendToDOM();
   }
   
   // Update the domain select based on the current project
@@ -784,6 +859,17 @@ class EnvSwitcherUI {
     
     // Add the container to the page
     document.body.appendChild(this.container);
+  }
+
+  // Extract domain from URL
+  extractDomainFromUrl(url) {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.hostname;
+    } catch (e) {
+      console.error('Error extracting domain from URL:', e);
+      return '';
+    }
   }
 }
 
