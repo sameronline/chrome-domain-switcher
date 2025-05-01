@@ -382,7 +382,7 @@ class EnvSwitcherUI {
     
     const autoRedirectLabel = document.createElement('label');
     autoRedirectLabel.htmlFor = 'floating-auto-redirect';
-    autoRedirectLabel.textContent = 'Auto';
+    autoRedirectLabel.textContent = 'Auto redirect';
     autoRedirectLabel.className = 'env-switcher-floating__label';
     
     autoRedirectContainer.appendChild(autoRedirectCheckbox);
